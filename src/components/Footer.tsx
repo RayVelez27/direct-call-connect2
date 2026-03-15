@@ -1,4 +1,5 @@
 import { Send } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const FOOTER_LOGO =
   "https://lh3.googleusercontent.com/aida-public/AB6AXuDaablFYSvEUJYC0E-DQF5SMMJxA-slOpNgFW6YUVf833yYmbJ9BVbBme4J2roS9kad7oL_Bi-EzGw5Oz41PEzN4Xn0UEjH9-d1Ym3Hk8o0kofZl4O2DUHjtJGa4Fd-oRF2xUS4y_YjCABx2PvxfRmMVQ22gQCs4oAu6GzLejADdd1tBreL3w-aqKh7ogxOfgxwAFy39P-ofqDoFlrFMqAxqcBo4eibeafxASJebqfHoM5CeyaLu_GuqiHvLPicncO_ZNHwaqoleMK1";
@@ -59,12 +60,12 @@ export default function Footer() {
         <div className="pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-xs text-muted-foreground">© 2024 Plezyy Inc. All rights reserved.</p>
           <div className="flex gap-8">
-            <a className="text-xs text-muted-foreground hover:text-primary transition-colors" href="#">
-              Privacy Policy
-            </a>
-            <a className="text-xs text-muted-foreground hover:text-primary transition-colors" href="#">
-              Terms of Service
-            </a>
+            <Link className="text-xs text-muted-foreground hover:text-primary transition-colors" to="/trust-and-safety">
+              Trust &amp; Safety
+            </Link>
+            <Link className="text-xs text-muted-foreground hover:text-primary transition-colors" to="/terms">
+              Terms &amp; Policies
+            </Link>
             <a className="text-xs text-muted-foreground hover:text-primary transition-colors" href="#">
               Cookies
             </a>

@@ -1,13 +1,6 @@
 import Navbar from "@/components/Navbar";
-import HeroSection from "@/components/HeroSection";
-import ProvidersSection from "@/components/ProvidersSection";
-import CtaBanner from "@/components/CtaBanner";
-import PlezyyPro from "@/components/PlezyyPro";
-import FaqSection from "@/components/FaqSection";
-import ExpertMatching from "@/components/ExpertMatching";
-
-import GuidesSection from "@/components/GuidesSection";
-import MakeItHappen from "@/components/MakeItHappen";
+import SignInHero from "@/components/SignInHero";
+import { DiscoveryContent } from "@/pages/Discovery";
 import Footer from "@/components/Footer";
 
 const Index = () => {
@@ -15,15 +8,8 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <main>
-        <HeroSection />
-        <ProvidersSection />
-        <CtaBanner />
-        <ExpertMatching />
-        
-        <GuidesSection />
-        <MakeItHappen />
-        <PlezyyPro />
-        <FaqSection />
+        <SignInHero />
+        <DiscoveryContent />
       </main>
       <Footer />
     </div>

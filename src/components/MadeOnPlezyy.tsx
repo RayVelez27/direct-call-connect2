@@ -3,7 +3,7 @@ export default function MadeOnPlezyy() {
     <section className="py-20 bg-secondary">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-foreground font-['Playfair_Display']">
+          <h2 className="text-3xl md:text-4xl font-bold text-foreground font-['Noto_Serif'] italic font-black">
             Made on Plezyy
           </h2>
           <p className="mt-3 text-muted-foreground text-lg">

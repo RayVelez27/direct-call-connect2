@@ -28,7 +28,7 @@ export default function MakeItHappen() {
         <div className="text-center mb-4">
           <p className="text-muted-foreground text-lg">Why Plezyy</p>
         </div>
-        <h2 className="text-3xl md:text-4xl font-bold text-foreground text-center mb-14 font-['Playfair_Display']">
+        <h2 className="text-3xl md:text-4xl font-bold text-foreground text-center mb-14 font-['Noto_Serif'] italic font-black">
           Your ultimate creator experience
         </h2>
 

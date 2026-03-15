@@ -12,6 +12,21 @@
   }
 }
 
+@keyframes favSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateX(-20px) scale(0.9);
+  }
+  60% {
+    opacity: 1;
+    transform: translateX(4px) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -119,6 +134,14 @@
 @keyframes searchColorShift {
   0% { background-color: #EB73B9; }
   100% { background-color: #17EAD9; }
+}
+
+@keyframes puffyBounce {
+  0%   { transform: scale(1); }
+  15%  { transform: scale(1.12); }
+  30%  { transform: scale(1); }
+  45%  { transform: scale(1.12); }
+  60%  { transform: scale(1); }
 }
 
 /* Masonry Grid */

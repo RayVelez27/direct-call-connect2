@@ -9,7 +9,7 @@ import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import plezyyLogo from "@/assets/plezyy-logo.jpeg";
 
-export default function SignIn() {
+export default function SignInHero() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
@@ -36,9 +36,9 @@ export default function SignIn() {
   };
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-2">
+    <section className="grid lg:grid-cols-2">
       {/* Left Panel */}
-      <div className="hidden lg:flex flex-col justify-between bg-primary p-12 text-primary-foreground">
+      <div className="hidden lg:flex flex-col justify-between bg-primary p-12 text-primary-foreground min-h-[600px]">
         <Link to="/">
           <img alt="Plezyy Logo" className="h-10 w-auto brightness-0 invert" src={plezyyLogo} />
         </Link>
@@ -71,9 +71,9 @@ export default function SignIn() {
 
           <form className="space-y-5" onSubmit={handleSignIn}>
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="hero-signin-email">Email</Label>
               <Input
-                id="email"
+                id="hero-signin-email"
                 type="email"
                 placeholder="name@company.com"
                 className="h-12 rounded-xl"
@@ -85,14 +85,14 @@ export default function SignIn() {
 
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="hero-signin-password">Password</Label>
                 <a href="#" className="text-sm text-primary hover:underline font-medium">
                   Forgot password?
                 </a>
               </div>
               <div className="relative">
                 <Input
-                  id="password"
+                  id="hero-signin-password"
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   className="h-12 rounded-xl pr-12"
@@ -111,8 +111,8 @@ export default function SignIn() {
             </div>
 
             <div className="flex items-center gap-2">
-              <Checkbox id="remember" />
-              <Label htmlFor="remember" className="text-sm font-normal text-muted-foreground cursor-pointer">
+              <Checkbox id="hero-remember" />
+              <Label htmlFor="hero-remember" className="text-sm font-normal text-muted-foreground cursor-pointer">
                 Remember me for 30 days
               </Label>
             </div>
@@ -151,12 +151,12 @@ export default function SignIn() {
 
           <p className="text-center text-sm text-muted-foreground">
             New to Plezyy?{" "}
-            <a href="#" className="text-primary font-semibold hover:underline">
+            <Link to="/sign-up" className="text-primary font-semibold hover:underline">
               Create an account
-            </a>
+            </Link>
           </p>
         </div>
       </div>
-    </div>
+    </section>
   );
 }

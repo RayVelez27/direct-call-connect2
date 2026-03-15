@@ -7,7 +7,7 @@ export default function CtaBanner() {
         <div className="relative bg-primary rounded-3xl p-12 md:p-20 overflow-hidden">
           <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 w-[500px] h-[500px] bg-blue-400/20 rounded-full blur-3xl" />
           <div className="relative z-10 max-w-2xl">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+            <h2 className="text-4xl md:text-5xl font-black italic text-white mb-6 font-['Noto_Serif']">
               Ready to monetize your intimacy? Start creating today.
             </h2>
             <p className="text-blue-100 text-lg mb-10">

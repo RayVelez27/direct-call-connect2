@@ -37,7 +37,7 @@ export default function FaqSection() {
   return (
     <section className="py-20 bg-background">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h2 className="text-3xl md:text-4xl font-bold text-foreground text-center mb-2 font-['Playfair_Display']">
+        <h2 className="text-3xl md:text-4xl font-bold text-foreground text-center mb-2 font-['Noto_Serif'] italic font-black">
           Frequently Asked Questions
         </h2>
         <p className="text-muted-foreground text-center mb-10">

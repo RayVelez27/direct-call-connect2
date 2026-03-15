@@ -14,7 +14,7 @@ export default function PlezyyPro() {
                 pro.
               </span>
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold text-primary-foreground leading-tight font-['Playfair_Display']">
+            <h2 className="text-3xl md:text-4xl font-bold text-primary-foreground leading-tight font-['Noto_Serif'] italic font-black">
               Premium experiences, or your money back
             </h2>
             <p className="text-primary-foreground/80 text-base md:text-lg leading-relaxed max-w-xl">

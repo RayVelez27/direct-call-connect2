@@ -1,20 +1,18 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { Search, Moon, Sun, Menu, X, LayoutGrid } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+import { Moon, Sun, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
-import plezyyLogo from "@/assets/plezyy-logo.jpeg";
-import CategoriesModal from "@/components/CategoriesModal";
+import plezyyLogo from "@/assets/Untitled design - 2026-03-15T061848.986.png";
 
 const navLinks = [
-  { label: "Explore", href: "#" },
-  { label: "Become a Creator", href: "/onboarding" },
-  { label: "How it Works", href: "/how-it-works" },
+  { label: "Explore", href: "/", matchPaths: ["/", "/discovery"] },
+  { label: "How It Works", href: "/how-it-works" },
 ];
 
 export default function Navbar() {
+  const location = useLocation();
   const [isDark, setIsDark] = useState(false);
-  const [categoriesOpen, setCategoriesOpen] = useState(false);
 
   const toggleDark = () => {
     document.documentElement.classList.toggle("dark");
@@ -30,29 +28,31 @@ export default function Navbar() {
           </div>
 
           <div className="hidden lg:flex items-center space-x-8">
-            {navLinks.map((link) => (
-              <Link
-                key={link.label}
-                to={link.href}
-                className="text-sm font-medium text-foreground hover:text-primary transition-colors"
-              >
-                {link.label}
-              </Link>
-            ))}
-            <button
-              onClick={() => setCategoriesOpen(true)}
-              className="flex items-center gap-1.5 text-sm font-medium text-foreground hover:text-primary transition-colors"
-            >
-              <LayoutGrid className="h-4 w-4" />
-              Categories
-            </button>
+            {navLinks.map((link) => {
+              const isActive = link.matchPaths
+                ? link.matchPaths.includes(location.pathname)
+                : location.pathname === link.href;
+              return (
+                <Link
+                  key={link.label}
+                  to={link.href}
+                  className={`text-sm font-medium transition-colors ${
+                    isActive
+                      ? "text-primary font-bold"
+                      : "text-foreground hover:text-primary"
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
+            <Link to="/sign-up">
+              <Button className="rounded-full text-sm font-semibold">Join Now</Button>
+            </Link>
             <Link to="/sign-in">
               <Button variant="ghost" className="text-sm font-semibold">
-                Log In
+                Sign In
               </Button>
-            </Link>
-            <Link to="/sign-up">
-              <Button className="rounded-full text-sm font-semibold">Sign Up</Button>
             </Link>
             <button
               onClick={toggleDark}
@@ -72,29 +72,31 @@ export default function Navbar() {
               <SheetContent side="right">
                 <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
                 <div className="flex flex-col gap-6 mt-8">
-                  {navLinks.map((link) => (
-                    <Link
-                      key={link.label}
-                      to={link.href}
-                      className="text-lg font-medium hover:text-primary transition-colors"
-                    >
-                      {link.label}
-                    </Link>
-                  ))}
-                  <button
-                    onClick={() => setCategoriesOpen(true)}
-                    className="flex items-center gap-2 text-lg font-medium hover:text-primary transition-colors"
-                  >
-                    <LayoutGrid className="h-5 w-5" />
-                    Categories
-                  </button>
+                  {navLinks.map((link) => {
+                    const isActive = link.matchPaths
+                      ? link.matchPaths.includes(location.pathname)
+                      : location.pathname === link.href;
+                    return (
+                      <Link
+                        key={link.label}
+                        to={link.href}
+                        className={`text-lg font-medium transition-colors ${
+                          isActive
+                            ? "text-primary font-bold"
+                            : "hover:text-primary"
+                        }`}
+                      >
+                        {link.label}
+                      </Link>
+                    );
+                  })}
+                  <Link to="/sign-up">
+                    <Button className="rounded-full text-lg font-semibold">Join Now</Button>
+                  </Link>
                   <Link to="/sign-in">
                     <Button variant="ghost" className="justify-start text-lg font-semibold">
-                      Log In
+                      Sign In
                     </Button>
-                  </Link>
-                  <Link to="/sign-up">
-                    <Button className="rounded-full text-lg font-semibold">Sign Up</Button>
                   </Link>
                   <button
                     onClick={toggleDark}
@@ -109,7 +111,6 @@ export default function Navbar() {
           </div>
         </div>
       </div>
-      <CategoriesModal open={categoriesOpen} onClose={() => setCategoriesOpen(false)} />
     </nav>
   );
 }

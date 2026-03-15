@@ -20,7 +20,7 @@ export default function GuidesSection() {
     <section className="py-20 bg-secondary">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between mb-10">
-          <h2 className="text-3xl md:text-4xl font-bold text-foreground font-['Playfair_Display']">
+          <h2 className="text-3xl md:text-4xl font-bold text-foreground font-['Noto_Serif'] italic font-black">
             Guides to help you grow
           </h2>
           <button className="text-primary font-semibold hover:underline flex items-center gap-1">

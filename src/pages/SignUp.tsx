@@ -1,22 +1,60 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Moon, Sun, Search, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
 import plezyyLogo from "@/assets/plezyy-logo.jpeg";
 
-type UserRole = "consumer" | "provider" | null;
+type UserRole = "consumer" | "creator" | null;
 
 export default function SignUp() {
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [selectedRole, setSelectedRole] = useState<UserRole>(null);
   const [isDark, setIsDark] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const toggleDark = () => {
     document.documentElement.classList.toggle("dark");
     setIsDark(!isDark);
+  };
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!selectedRole) {
+      toast.error("Please select whether you're a Member or Creator.");
+      return;
+    }
+    if (!agreedToTerms) {
+      toast.error("Please agree to the Terms of Service and Privacy Policy.");
+      return;
+    }
+
+    setLoading(true);
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { role: selectedRole },
+      },
+    });
+    setLoading(false);
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    toast.success("Account created!");
+    navigate(selectedRole === "creator" ? "/dashboard/creator" : "/dashboard/user");
   };
 
   return (
@@ -81,9 +119,9 @@ export default function SignUp() {
             </button>
 
             <button
-              onClick={() => setSelectedRole("provider")}
+              onClick={() => setSelectedRole("creator")}
               className={`selection-card rounded-xl p-6 text-left border-2 transition-all duration-300 cursor-pointer ${
-                selectedRole === "provider"
+                selectedRole === "creator"
                   ? "border-primary bg-primary/5 shadow-lg"
                   : "border-border hover:border-primary hover:bg-primary/5"
               }`}
@@ -97,14 +135,14 @@ export default function SignUp() {
               <p className="text-sm text-muted-foreground leading-relaxed">
                 I want to monetize my intimacy & earn from adult freelancing.
               </p>
-              {selectedRole === "provider" && (
+              {selectedRole === "creator" && (
                 <p className="mt-3 text-xs font-semibold text-primary">Selected</p>
               )}
             </button>
           </div>
 
           {/* Sign Up Form */}
-          <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
+          <form className="space-y-5" onSubmit={handleSignUp}>
             <div className="text-center">
               <h2 className="text-xl font-bold text-foreground">Create your account</h2>
             </div>
@@ -116,6 +154,9 @@ export default function SignUp() {
                 type="email"
                 placeholder="name@example.com"
                 className="h-12 rounded-xl"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
               />
             </div>
 
@@ -127,6 +168,9 @@ export default function SignUp() {
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   className="h-12 rounded-xl pr-12"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
                 />
                 <button
                   type="button"
@@ -139,7 +183,12 @@ export default function SignUp() {
             </div>
 
             <div className="flex items-start gap-2">
-              <Checkbox id="terms" className="mt-0.5" />
+              <Checkbox
+                id="terms"
+                className="mt-0.5"
+                checked={agreedToTerms}
+                onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
+              />
               <Label htmlFor="terms" className="text-sm font-normal text-muted-foreground cursor-pointer leading-relaxed">
                 I agree to the{" "}
                 <a href="#" className="text-primary hover:underline font-medium">Terms of Service</a>{" "}
@@ -148,8 +197,8 @@ export default function SignUp() {
               </Label>
             </div>
 
-            <Button type="submit" className="w-full h-12 rounded-xl text-base font-bold">
-              Create account
+            <Button type="submit" className="w-full h-12 rounded-xl text-base font-bold" disabled={loading}>
+              {loading ? "Creating account..." : "Create account"}
             </Button>
           </form>
 

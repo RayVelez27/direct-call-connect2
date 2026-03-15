@@ -21,7 +21,7 @@ export default function HeroSection() {
         </div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full py-20">
           <div className="max-w-3xl">
-            <h1 className="text-5xl md:text-7xl font-bold leading-tight mb-8 text-white">
+            <h1 className="text-5xl md:text-7xl font-black italic leading-tight mb-8 text-white font-['Noto_Serif']">
               The Online Marketplace for Virtual Adult Services
             </h1>
             <div className="relative max-w-2xl mb-8">

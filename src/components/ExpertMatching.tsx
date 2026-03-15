@@ -4,7 +4,7 @@ export default function ExpertMatching() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="rounded-2xl bg-card border border-border p-8 md:p-12 flex flex-col md:flex-row items-center gap-8">
           <div className="flex-1 space-y-4">
-            <h2 className="text-2xl md:text-3xl font-bold text-foreground font-['Playfair_Display']">
+            <h2 className="text-2xl md:text-3xl font-bold text-foreground font-['Noto_Serif'] italic font-black">
               Looking for the perfect creator?
             </h2>
             <p className="text-muted-foreground text-base md:text-lg max-w-xl">
