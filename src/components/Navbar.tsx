@@ -6,7 +6,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/s
 import plezyyLogo from "@/assets/Untitled design - 2026-03-15T061848.986.png";
 
 const navLinks = [
-  { label: "Explore", href: "/", matchPaths: ["/", "/discovery"] },
+  { label: "Explore", href: "/discovery", matchPaths: ["/discovery"] },
   { label: "How It Works", href: "/how-it-works" },
 ];
 
