@@ -35,6 +35,7 @@ import {
   Shield,
   Eye,
   RotateCcw,
+  Star,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import categoriesData from "@/data/categories.json";
@@ -58,6 +59,12 @@ const categorySections: CategorySection[] = (categoriesData as CategorySection[]
   (s) => s.heading !== "Main"
 );
 
+interface Review {
+  text: string;
+  author: string;
+  rating: number; // 1–5
+}
+
 interface Creator {
   id: number;
   name: string;
@@ -75,6 +82,7 @@ interface Creator {
   earned: string;
   quote: string;
   quoteAuthor: string;
+  reviews?: Review[];
   images?: string[];
 }
 
@@ -1259,6 +1267,8 @@ export function DiscoveryContent() {
   const [chatCreators, setChatCreators] = useState<Creator[]>([]);
   const [chatPulse, setChatPulse] = useState(false);
   const [activeChatCreator, setActiveChatCreator] = useState<Creator | null>(null);
+  const [activeProfileCreator, setActiveProfileCreator] = useState<Creator | null>(null);
+  const [activeService, setActiveService] = useState<{ creator: Creator; service: CreatorService } | null>(null);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [sidebarTab, setSidebarTab] = useState<"filter" | "chat" | "favorite">("filter");
   const [selectedServices, setSelectedServices] = useState<Set<string>>(new Set(serviceOfferings));
@@ -1581,11 +1591,26 @@ export function DiscoveryContent() {
 
         {/* Main Content — dark theme */}
         <div className={`flex-1 min-h-0 min-w-0 bg-[#f0f0f0] rounded-2xl relative ${showMobileFilters ? "hidden lg:block" : ""}`}>
-          {activeChatCreator ? (
+          {activeService ? (
+            <ServicePostView
+              creator={activeService.creator}
+              service={activeService.service}
+              onBack={() => setActiveService(null)}
+              onChat={(creator) => { setActiveService(null); setActiveProfileCreator(null); handleCreatorChat(creator); setActiveChatCreator(creator); }}
+            />
+          ) : activeProfileCreator ? (
+            <ProfileView
+              creator={activeProfileCreator}
+              onBack={() => setActiveProfileCreator(null)}
+              onChat={(creator) => { setActiveProfileCreator(null); handleCreatorChat(creator); setActiveChatCreator(creator); }}
+              onLike={handleCreatorLiked}
+              onViewService={(service) => setActiveService({ creator: activeProfileCreator, service })}
+            />
+          ) : activeChatCreator ? (
             <ChatView creator={activeChatCreator} onBack={() => setActiveChatCreator(null)} />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center">
-              <SwipeView creators={creators} onLike={handleCreatorLiked} onChat={handleCreatorChat} />
+              <SwipeView creators={creators} onLike={handleCreatorLiked} onChat={handleCreatorChat} onViewProfile={setActiveProfileCreator} />
             </div>
           )}
         </div>
@@ -1614,7 +1639,7 @@ interface SwipeDragState {
   transitioning: boolean;
 }
 
-function SwipeView({ creators: initialCreators, onLike, onChat }: { creators: Creator[]; onLike?: (creator: Creator) => void; onChat?: (creator: Creator) => void }) {
+function SwipeView({ creators: initialCreators, onLike, onChat, onViewProfile }: { creators: Creator[]; onLike?: (creator: Creator) => void; onChat?: (creator: Creator) => void; onViewProfile?: (creator: Creator) => void }) {
   const [cards, setCards] = useState<Creator[]>([...initialCreators].reverse());
   const [topDragX, setTopDragX] = useState(0);
   const [lastAction, setLastAction] = useState<string | null>(null);
@@ -1641,9 +1666,9 @@ function SwipeView({ creators: initialCreators, onLike, onChat }: { creators: Cr
   };
 
   return (
-    <div className="flex flex-col items-center w-full max-w-[400px]">
+    <div className="flex flex-col items-center w-full max-w-[440px]">
       {/* Card stack */}
-      <div className="relative w-full" style={{ height: "min(560px, 70vh)" }}>
+      <div className="relative w-full" style={{ height: "min(616px, 77vh)" }}>
         {cards.length === 0 ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
             <div className="rounded-full bg-black/5 p-5 mb-4">
@@ -1680,18 +1705,13 @@ function SwipeView({ creators: initialCreators, onLike, onChat }: { creators: Cr
                 }}
                 onForceSwipe={isTop ? forceSwipe : undefined}
                 onChat={() => onChat?.(creator)}
+                onViewProfile={() => onViewProfile?.(creator)}
               />
             );
           })
         )}
       </div>
 
-      {/* Last action */}
-      {lastAction && cards.length > 0 && (
-        <p className="text-xs text-muted-foreground mt-4">
-          You <span className={`font-bold ${lastAction === "Liked" ? "text-green-500" : "text-red-400"}`}>{lastAction.toLowerCase()}</span> the last creator
-        </p>
-      )}
     </div>
   );
 }
@@ -1785,6 +1805,7 @@ function SwipeCard({
   onSwipe,
   onForceSwipe,
   onChat,
+  onViewProfile,
 }: {
   creator: Creator;
   isTop: boolean;
@@ -1794,6 +1815,7 @@ function SwipeCard({
   onSwipe?: (dir: "left" | "right") => void;
   onForceSwipe?: (dir: "left" | "right") => void;
   onChat?: () => void;
+  onViewProfile?: () => void;
 }) {
   const [state, setState] = useState<SwipeDragState>({ x: 0, y: 0, isDragging: false, transitioning: false });
   const [imgIdx, setImgIdx] = useState(0);
@@ -1979,11 +2001,670 @@ function SwipeCard({
             >
               <MessageCircle className="h-3.5 w-3.5" />
             </button>
-            <Link to="/service-post" data-gallery-arrow onClick={(e) => e.stopPropagation()}>
-              <button className="h-9 w-9 rounded-xl border-[3px] border-violet-300/40 bg-violet-500/20 backdrop-blur-sm flex items-center justify-center text-violet-300 hover:bg-violet-500/40 hover:border-violet-300/60 transition-all hover:scale-110 active:scale-95">
-                <Eye className="h-3.5 w-3.5" />
+            <button
+              data-gallery-arrow
+              onClick={(e) => { e.stopPropagation(); onViewProfile?.(); }}
+              className="h-9 w-9 rounded-xl border-[3px] border-violet-300/40 bg-violet-500/20 backdrop-blur-sm flex items-center justify-center text-violet-300 hover:bg-violet-500/40 hover:border-violet-300/60 transition-all hover:scale-110 active:scale-95"
+            >
+              <Eye className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════
+   CREATOR SERVICES (mock data)
+   ═══════════════════════════════ */
+
+interface CreatorService {
+  name: string;
+  description: string;
+  startingPrice: string;
+  duration?: string;
+  popular?: boolean;
+  image?: string;
+}
+
+const serviceTemplates: Record<string, CreatorService> = {
+  "Striptease": { name: "do a slow, sensual striptease for you on camera", description: "A private strip show at your pace — teasing, undressing, and giving you a show you won't forget.", startingPrice: "$40", duration: "15 min" },
+  "GFE": { name: "be your virtual girlfriend", description: "Sweet texts, flirty video calls, and the full GFE — like we're actually dating.", startingPrice: "$55", duration: "30 min", popular: true },
+  "Dirty Talk": { name: "talk dirty to you on the phone", description: "Straight-up filthy conversation — moaning, teasing, and guiding you through it.", startingPrice: "$30", duration: "15 min" },
+  "Roleplay": { name: "act out any fantasy you want", description: "Nurse, teacher, boss, stranger — you name the scenario and I'll play it out for you.", startingPrice: "$50", duration: "30 min" },
+  "Toy Play": { name: "let you control my toy live", description: "You control my vibrator live through an app while we're on video together.", startingPrice: "$45", duration: "20 min", popular: true },
+  "Custom Content": { name: "create custom photos & videos just for you", description: "Tell me exactly what you want — I'll make nude pics or explicit videos tailored to your fantasy.", startingPrice: "$35" },
+  "Video Calls": { name: "do a private 1-on-1 video call with you", description: "HD video session — casual, flirty, or as explicit as you want it to be.", startingPrice: "$25", duration: "15 min", popular: true },
+  "Interactive": { name: "follow your directions live on camera", description: "Live and interactive — I do exactly what you tell me in real time.", startingPrice: "$50", duration: "20 min" },
+  "Femdom": { name: "dominate and control you", description: "I boss you around, give orders, humiliate, and take full control on video or chat.", startingPrice: "$65", duration: "30 min" },
+  "JOI": { name: "give you jerk off instructions", description: "I tell you exactly how to stroke it, tease you, edge you, and make you finish on command.", startingPrice: "$35", duration: "15 min", popular: true },
+  "Foot Fetish": { name: "worship my feet for you on camera", description: "Close-ups, toe play, worship vibes — pics, video, or live.", startingPrice: "$30", duration: "15 min" },
+  "Humiliation": { name: "roast and humiliate you", description: "SPH, teasing, and whatever level of humiliation you're into — mean, playful, or brutal.", startingPrice: "$40", duration: "15 min" },
+  "Companionship": { name: "just hang out and talk with you", description: "Casual video or voice chat — for when you're lonely and want real company.", startingPrice: "$20", duration: "30 min" },
+  "Sexting": { name: "sext with you all night", description: "Hot back-and-forth texting with photos — at your pace, whenever you want.", startingPrice: "$25" },
+  "Live Shows": { name: "perform a live cam show for you", description: "Watch me live — solo play, toys, outfits, whatever you're into.", startingPrice: "$45", duration: "20 min", popular: true },
+  "Fetish": { name: "explore your kink with you", description: "Latex, leather, BDSM, or whatever your fetish is — let's get into it together.", startingPrice: "$55", duration: "30 min" },
+  "Domination": { name: "give you a full domination session", description: "Complete control — orders, tasks, humiliation, and obedience training.", startingPrice: "$70", duration: "30 min" },
+};
+
+// Default services every creator offers
+const defaultService: CreatorService = {
+  name: "make your custom request happen",
+  description: "Have something specific in mind? Tell me your idea and I'll bring it to life.",
+  startingPrice: "$30",
+};
+
+function getCreatorServices(creator: Creator, basePrice: number): CreatorService[] {
+  const services: CreatorService[] = [];
+
+  // Map creator tags to service templates
+  for (const tag of creator.tags) {
+    const template = serviceTemplates[tag];
+    if (template) {
+      services.push({
+        ...template,
+        // Scale price based on creator's base price
+        startingPrice: `$${Math.round(parseInt(template.startingPrice.replace("$", "")) * (basePrice / 40))}`,
+      });
+    }
+  }
+
+  // Always add a custom request service
+  services.push({
+    ...defaultService,
+    startingPrice: `$${Math.round(basePrice * 0.75)}`,
+  });
+
+  return services;
+}
+
+/* ═══════════════════════════════
+   PROFILE VIEW
+   ═══════════════════════════════ */
+
+function ProfileView({
+  creator,
+  onBack,
+  onChat,
+  onLike,
+  onViewService,
+}: {
+  creator: Creator;
+  onBack: () => void;
+  onChat: (creator: Creator) => void;
+  onLike: (creator: Creator) => void;
+  onViewService: (service: CreatorService) => void;
+}) {
+  const [imgIdx, setImgIdx] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const images = creator.images ?? [];
+  const hasGallery = images.length > 1;
+
+  const basePrice = parseInt(creator.price.replace("$", ""));
+  const services = getCreatorServices(creator, basePrice);
+
+  /* Shared sub-components to avoid duplication between mobile/desktop */
+  const galleryBlock = (
+    <div className="relative w-full aspect-[4/3] bg-gray-900 rounded-xl overflow-hidden group/gallery">
+      {images[imgIdx] ? (
+        <>
+          {/* Blurred background fill */}
+          <div
+            className="absolute inset-0 bg-cover bg-center scale-110 blur-xl opacity-60"
+            style={{ backgroundImage: `url(${images[imgIdx]})` }}
+          />
+          {/* Sharp image on top */}
+          <img
+            src={images[imgIdx]}
+            alt={creator.name}
+            className="relative w-full h-full object-contain z-[1]"
+          />
+          {/* Eye icon overlay on hover */}
+          <button
+            onClick={() => setLightboxOpen(true)}
+            className="absolute inset-0 z-[2] flex items-center justify-center bg-black/0 group-hover/gallery:bg-black/20 transition-colors cursor-pointer"
+          >
+            <div className="h-10 w-10 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white opacity-0 group-hover/gallery:opacity-100 transition-opacity scale-90 group-hover/gallery:scale-100">
+              <Eye className="h-5 w-5" />
+            </div>
+          </button>
+        </>
+      ) : (
+        <div className="w-full h-full bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center">
+          <span className="text-6xl font-extrabold text-white/20">{creator.initials}</span>
+        </div>
+      )}
+      {hasGallery && (
+        <>
+          <button
+            onClick={() => setImgIdx((i) => (i - 1 + images.length) % images.length)}
+            className="absolute left-3 top-1/2 -translate-y-1/2 z-[3] h-8 w-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/60 transition-colors"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => setImgIdx((i) => (i + 1) % images.length)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 z-[3] h-8 w-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/60 transition-colors"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-[3] flex gap-1.5">
+            {images.map((_, i) => (
+              <div key={i} className={`h-1.5 rounded-full transition-all ${i === imgIdx ? "w-5 bg-white" : "w-1.5 bg-white/50"}`} />
+            ))}
+          </div>
+        </>
+      )}
+      {creator.online && (
+        <div className="absolute top-3 left-3 z-[3] bg-green-500/90 backdrop-blur-sm text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full flex items-center gap-1.5">
+          <span className="h-1.5 w-1.5 bg-white rounded-full animate-pulse" />
+          Online
+        </div>
+      )}
+    </div>
+  );
+
+  /* Lightbox modal */
+  const lightboxModal = lightboxOpen && images[imgIdx] ? (
+    <div
+      className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center"
+      onClick={() => setLightboxOpen(false)}
+    >
+      {/* Close button */}
+      <button
+        onClick={() => setLightboxOpen(false)}
+        className="absolute top-4 right-4 h-10 w-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/20 transition-colors z-10"
+      >
+        <X className="h-5 w-5" />
+      </button>
+
+      {/* Image */}
+      <img
+        src={images[imgIdx]}
+        alt={creator.name}
+        className="max-w-[90vw] max-h-[85vh] object-contain rounded-lg"
+        onClick={(e) => e.stopPropagation()}
+      />
+
+      {/* Gallery nav in lightbox */}
+      {hasGallery && (
+        <>
+          <button
+            onClick={(e) => { e.stopPropagation(); setImgIdx((i) => (i - 1 + images.length) % images.length); }}
+            className="absolute left-4 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/20 transition-colors"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); setImgIdx((i) => (i + 1) % images.length); }}
+            className="absolute right-4 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/20 transition-colors"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
+            {images.map((_, i) => (
+              <button
+                key={i}
+                onClick={(e) => { e.stopPropagation(); setImgIdx(i); }}
+                className={`h-2 rounded-full transition-all ${i === imgIdx ? "w-6 bg-white" : "w-2 bg-white/40 hover:bg-white/60"}`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Image counter */}
+      <div className="absolute top-4 left-4 text-white/60 text-sm font-medium">
+        {imgIdx + 1} / {images.length}
+      </div>
+    </div>
+  ) : null;
+
+  const identityBlock = (
+    <div className="space-y-4">
+      <div>
+        <div className="flex items-center gap-2">
+          <h2 className="text-xl font-extrabold text-foreground">{creator.name}</h2>
+          <span className="text-sm text-muted-foreground">{creator.age}</span>
+          <BadgeCheck className="h-4 w-4 text-blue-500" />
+        </div>
+        <p className="text-sm text-muted-foreground mt-0.5">{creator.tagline}</p>
+        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+          <MapPin className="h-3 w-3 text-muted-foreground" />
+          <span className="text-xs text-muted-foreground">{creator.location}</span>
+          <span className="text-muted-foreground/30">·</span>
+          <Shield className="h-3 w-3 text-muted-foreground" />
+          <span className="text-xs text-muted-foreground">{creator.successRate} success</span>
+          <span className="text-muted-foreground/30">·</span>
+          <TrendingUp className="h-3 w-3 text-muted-foreground" />
+          <span className="text-xs text-muted-foreground">{creator.earned}</span>
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {creator.tags.map((tag) => (
+          <span key={tag} className="text-xs font-medium px-2.5 py-1 rounded-full bg-[#4180FB]/10 text-[#4180FB]">
+            {tag}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+
+  const actionsBlock = (
+    <div className="flex items-center gap-3">
+      <button
+        onClick={() => onLike(creator)}
+        className="h-10 w-10 rounded-full border-2 border-rose-200 bg-rose-50 flex items-center justify-center text-rose-500 hover:bg-rose-100 transition-colors shrink-0"
+      >
+        <Heart className="h-4 w-4" />
+      </button>
+      <button
+        onClick={() => onChat(creator)}
+        className="flex-1 h-10 rounded-full bg-[#4180FB] text-white text-sm font-semibold hover:bg-[#3268D4] transition-colors flex items-center justify-center gap-2"
+      >
+        <MessageCircle className="h-4 w-4" />
+        Message {creator.name.split(" ")[0]}
+      </button>
+    </div>
+  );
+
+  const bioBlock = (
+    <div>
+      <h3 className="text-sm font-bold text-foreground mb-1.5">About</h3>
+      <p className="text-sm text-muted-foreground leading-relaxed">{creator.bio}</p>
+    </div>
+  );
+
+  // Build reviews list from existing quote + mock extras
+  const allReviews: Review[] = [];
+  if (creator.quote) {
+    allReviews.push({ text: creator.quote, author: creator.quoteAuthor, rating: 5 });
+  }
+  // Add mock additional reviews
+  const extraReviews: Review[] = [
+    { text: "Amazing session, felt so natural and fun. Will definitely book again!", author: "Anonymous", rating: 5 },
+    { text: "Great energy and really attentive. Exceeded my expectations.", author: "Sam T.", rating: 4 },
+    { text: "Professional, creative, and so easy to talk to. Highly recommend.", author: "Jordan P.", rating: 5 },
+    { text: "Good experience overall. Communication was solid and the session was enjoyable.", author: "Riley K.", rating: 4 },
+  ];
+  allReviews.push(...extraReviews);
+
+  const [reviewIdx, setReviewIdx] = useState(0);
+  const currentReview = allReviews[reviewIdx];
+
+  const reviewBlock = allReviews.length > 0 ? (
+    <div className="bg-[#4180FB] rounded-xl p-4">
+      {/* Stars */}
+      <div className="flex items-center gap-0.5 mb-2">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <Star
+            key={star}
+            className={`h-4 w-4 ${star <= currentReview.rating ? "fill-white text-white" : "fill-white/20 text-white/20"}`}
+          />
+        ))}
+        <span className="text-xs text-white/60 ml-2">{reviewIdx + 1} / {allReviews.length}</span>
+      </div>
+      {/* Quote text */}
+      <p className="text-sm text-white/90 italic leading-relaxed">"{currentReview.text}"</p>
+      <p className="text-xs font-semibold text-white mt-2">— {currentReview.author}</p>
+      {/* Navigation arrows */}
+      {allReviews.length > 1 && (
+        <div className="flex items-center gap-2 mt-3">
+          <button
+            onClick={() => setReviewIdx((i) => (i - 1 + allReviews.length) % allReviews.length)}
+            className="h-7 w-7 rounded-full bg-white/15 flex items-center justify-center text-white hover:bg-white/25 transition-colors"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </button>
+          <div className="flex gap-1">
+            {allReviews.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setReviewIdx(i)}
+                className={`h-1.5 rounded-full transition-all ${i === reviewIdx ? "w-4 bg-white" : "w-1.5 bg-white/30 hover:bg-white/50"}`}
+              />
+            ))}
+          </div>
+          <button
+            onClick={() => setReviewIdx((i) => (i + 1) % allReviews.length)}
+            className="h-7 w-7 rounded-full bg-white/15 flex items-center justify-center text-white hover:bg-white/25 transition-colors"
+          >
+            <ChevronRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
+    </div>
+  ) : null;
+
+  const servicesBlock = (
+    <div>
+      <h3 className="text-sm font-bold text-foreground mb-3">Services</h3>
+      <div className="space-y-3">
+        {services.map((service) => (
+          <button
+            key={service.name}
+            onClick={() => onViewService(service)}
+            className="block w-full text-left rounded-xl border border-gray-200 hover:border-[#4180FB]/50 hover:shadow-sm transition-all overflow-hidden group"
+          >
+            <div className="p-3.5">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground leading-snug"><span className="text-[#4180FB]">I will</span> {service.name}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{service.description}</p>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0 mt-0.5 group-hover:text-[#4180FB] transition-colors" />
+              </div>
+              <div className="flex items-center gap-3 mt-2.5">
+                <span className="text-sm font-extrabold text-foreground">From {service.startingPrice}</span>
+                {service.duration && (
+                  <>
+                    <span className="text-muted-foreground/30">·</span>
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {service.duration}
+                    </span>
+                  </>
+                )}
+                {service.popular && (
+                  <>
+                    <span className="text-muted-foreground/30">·</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#4180FB] bg-[#4180FB]/10 px-1.5 py-0.5 rounded">Popular</span>
+                  </>
+                )}
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="absolute inset-0 flex flex-col bg-white rounded-2xl overflow-hidden">
+      {lightboxModal}
+      {/* Header bar */}
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-black/10 shrink-0">
+        <button
+          onClick={onBack}
+          className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-black/5 transition-colors"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+        <div className="relative">
+          {images[0] ? (
+            <img src={images[0]} alt={creator.name} className="h-10 w-10 rounded-full object-cover ring-2 ring-violet-400/50" />
+          ) : (
+            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center ring-2 ring-violet-400/50">
+              <span className="text-xs font-bold text-primary">{creator.initials}</span>
+            </div>
+          )}
+          {creator.online && (
+            <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-white" />
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold text-foreground truncate">{creator.name}</p>
+          <p className="text-xs text-muted-foreground truncate">{creator.online ? "Online now" : "Offline"}</p>
+        </div>
+      </div>
+
+      {/* ── MOBILE: single-column scroll ── */}
+      <div className="flex-1 overflow-y-auto md:hidden">
+        <div className="p-4 space-y-5">
+          {galleryBlock}
+          {identityBlock}
+          {actionsBlock}
+          {bioBlock}
+          {reviewBlock}
+          {servicesBlock}
+        </div>
+      </div>
+
+      {/* ── DESKTOP: two-column layout ── */}
+      <div className="flex-1 overflow-hidden hidden md:flex">
+        {/* Left column — identity (no scroll) */}
+        <div className="w-1/2 shrink-0 border-r border-black/5 p-5 space-y-5 flex flex-col">
+          {galleryBlock}
+          {identityBlock}
+          {actionsBlock}
+        </div>
+
+        {/* Right column — scrollable bio, review, services */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-5">
+          {bioBlock}
+          {reviewBlock}
+          {servicesBlock}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════
+   SERVICE POST VIEW (inline)
+   ═══════════════════════════════ */
+
+const serviceFaqs = [
+  { question: "Is the session private and secure?", answer: "Absolutely. All sessions are end-to-end private. Only you and the creator are in the call. Plezyy never records or monitors sessions." },
+  { question: "Can I request specific outfits or scenarios?", answer: "Yes! Send the creator a message before booking to discuss your preferences. Most creators are happy to accommodate requests." },
+  { question: "What if I need to reschedule?", answer: "You can reschedule up to 2 hours before the session. After that, the booking is final." },
+  { question: "How does payment work?", answer: "Payments are processed securely through Plezyy Pay (powered by Stripe). You'll be charged once you confirm your booking." },
+];
+
+function ServicePostView({
+  creator,
+  service,
+  onBack,
+  onChat,
+}: {
+  creator: Creator;
+  service: CreatorService;
+  onBack: () => void;
+  onChat: (creator: Creator) => void;
+}) {
+  const [activeTier, setActiveTier] = useState(1);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const images = creator.images ?? [];
+
+  // Generate tiers from service price
+  const basePrice = parseInt(service.startingPrice.replace("$", ""));
+  const tiers = [
+    {
+      label: "Basic",
+      price: `$${basePrice}`,
+      name: `Quick session`,
+      duration: service.duration || "15 min",
+      features: ["Video or voice call", "1 custom request", "Text chat included"],
+    },
+    {
+      label: "Standard",
+      price: `$${Math.round(basePrice * 1.8)}`,
+      name: `Full session`,
+      duration: service.duration ? `${parseInt(service.duration) * 2} min` : "30 min",
+      features: ["HD video call", "3 custom requests", "Chat access", "Session recording"],
+      popular: true,
+    },
+    {
+      label: "Premium",
+      price: `$${Math.round(basePrice * 3.5)}`,
+      name: `VIP experience`,
+      duration: service.duration ? `${parseInt(service.duration) * 4} min` : "60 min",
+      features: ["HD video call", "Unlimited requests", "Priority chat", "Recording included", "Custom content"],
+    },
+  ];
+  const tier = tiers[activeTier];
+
+  return (
+    <div className="absolute inset-0 flex flex-col bg-white rounded-2xl overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-black/10 shrink-0">
+        <button
+          onClick={onBack}
+          className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-black/5 transition-colors"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+        <div className="relative">
+          {images[0] ? (
+            <img src={images[0]} alt={creator.name} className="h-10 w-10 rounded-full object-cover ring-2 ring-[#4180FB]/50" />
+          ) : (
+            <div className="h-10 w-10 rounded-full bg-[#4180FB]/10 flex items-center justify-center ring-2 ring-[#4180FB]/50">
+              <span className="text-xs font-bold text-[#4180FB]">{creator.initials}</span>
+            </div>
+          )}
+          {creator.online && (
+            <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-white" />
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold text-foreground truncate"><span className="text-[#4180FB]">I will</span> {service.name}</p>
+          <p className="text-xs text-muted-foreground">by {creator.name}</p>
+        </div>
+      </div>
+
+      {/* Scrollable content — two-column on desktop */}
+      <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
+        {/* Left: service details */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-6 md:border-r md:border-black/5">
+          {/* Service title + badges */}
+          <div>
+            <div className="flex flex-wrap gap-2 mb-3">
+              {service.popular && (
+                <span className="text-[10px] font-bold uppercase tracking-wider bg-[#4180FB]/10 text-[#4180FB] px-2 py-0.5 rounded-full">Popular</span>
+              )}
+              {service.duration && (
+                <span className="text-[10px] font-bold uppercase tracking-wider bg-gray-100 text-muted-foreground px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <Clock className="h-3 w-3" /> {service.duration}
+                </span>
+              )}
+            </div>
+            <h2 className="text-xl font-extrabold text-foreground mb-2"><span className="text-[#4180FB]">I will</span> {service.name}</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">{service.description}</p>
+          </div>
+
+          {/* Creator mini card */}
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50">
+            {images[0] ? (
+              <img src={images[0]} alt={creator.name} className="h-12 w-12 rounded-xl object-cover" />
+            ) : (
+              <div className="h-12 w-12 rounded-xl bg-[#4180FB]/10 flex items-center justify-center">
+                <span className="text-sm font-bold text-[#4180FB]">{creator.initials}</span>
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5">
+                <p className="text-sm font-bold text-foreground">{creator.name}</p>
+                <BadgeCheck className="h-3.5 w-3.5 text-[#4180FB]" />
+              </div>
+              <p className="text-xs text-muted-foreground">{creator.tagline}</p>
+            </div>
+            {creator.online && (
+              <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">Online</span>
+            )}
+          </div>
+
+          {/* What's included */}
+          <div>
+            <h3 className="text-sm font-bold text-foreground mb-3">What's included</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {tier.features.map((f) => (
+                <div key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span className="h-4 w-4 rounded-full bg-[#4180FB]/10 flex items-center justify-center shrink-0">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#4180FB]" />
+                  </span>
+                  {f}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* FAQ */}
+          <div>
+            <h3 className="text-sm font-bold text-foreground mb-3">FAQ</h3>
+            <div className="space-y-2">
+              {serviceFaqs.map((faq, i) => (
+                <div key={i} className="rounded-xl border border-gray-200 overflow-hidden">
+                  <button
+                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                    className="w-full flex items-center justify-between px-4 py-3 text-left text-sm font-medium text-foreground hover:bg-gray-50 transition-colors"
+                  >
+                    {faq.question}
+                    <ChevronRight className={`h-4 w-4 text-muted-foreground/40 shrink-0 transition-transform duration-200 ${openFaq === i ? "rotate-90" : ""}`} />
+                  </button>
+                  {openFaq === i && (
+                    <div className="px-4 pb-3 text-xs text-muted-foreground leading-relaxed">
+                      {faq.answer}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Right: pricing tiers */}
+        <div className="md:w-[280px] lg:w-[320px] shrink-0 overflow-y-auto p-5 space-y-4 border-t md:border-t-0 border-black/5">
+          {/* Tier tabs */}
+          <div className="flex rounded-xl bg-gray-100 p-1">
+            {tiers.map((t, i) => (
+              <button
+                key={t.label}
+                onClick={() => setActiveTier(i)}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+                  activeTier === i
+                    ? "bg-white text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {t.label}
               </button>
-            </Link>
+            ))}
+          </div>
+
+          {/* Active tier card */}
+          <div className="rounded-xl border border-gray-200 p-4 space-y-3">
+            {tier.popular && (
+              <span className="text-[10px] font-bold uppercase tracking-wider bg-[#4180FB] text-white px-2 py-0.5 rounded-full">Best Value</span>
+            )}
+            <div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-2xl font-extrabold text-foreground">{tier.price}</span>
+                <span className="text-xs text-muted-foreground">/ session</span>
+              </div>
+              <p className="text-sm font-semibold text-foreground mt-0.5">{tier.name}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{tier.duration}</p>
+            </div>
+            <ul className="space-y-1.5">
+              {tier.features.map((f) => (
+                <li key={f} className="text-xs text-muted-foreground flex items-center gap-1.5">
+                  <span className="h-1 w-1 rounded-full bg-[#4180FB]" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+            <button className="w-full h-10 rounded-full bg-[#4180FB] text-white text-sm font-semibold hover:bg-[#3268D4] transition-colors flex items-center justify-center gap-2">
+              <Video className="h-4 w-4" />
+              Book — {tier.price}
+            </button>
+            <button
+              onClick={() => onChat(creator)}
+              className="w-full h-10 rounded-full border border-gray-200 text-sm font-semibold text-foreground hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+            >
+              <MessageCircle className="h-4 w-4" />
+              Message {creator.name.split(" ")[0]}
+            </button>
+          </div>
+
+          {/* Trust badge */}
+          <div className="flex items-start gap-2.5 p-3 bg-[#4180FB]/5 rounded-xl">
+            <Shield className="h-4 w-4 text-[#4180FB] shrink-0 mt-0.5" />
+            <div>
+              <p className="text-xs font-bold text-foreground">Secure & Private</p>
+              <p className="text-[10px] text-muted-foreground leading-relaxed mt-0.5">
+                All sessions are encrypted. Payments via Plezyy Pay (Stripe).
+              </p>
+            </div>
           </div>
         </div>
       </div>

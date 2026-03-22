@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Moon, Sun, Search, Award } from "lucide-react";
+import { Eye, EyeOff, Search, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
-import plezyyLogo from "@/assets/plezyy-logo.jpeg";
+import Navbar from "@/components/Navbar";
 
 type UserRole = "consumer" | "creator" | null;
 
@@ -15,16 +15,10 @@ export default function SignUp() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [selectedRole, setSelectedRole] = useState<UserRole>(null);
-  const [isDark, setIsDark] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  const toggleDark = () => {
-    document.documentElement.classList.toggle("dark");
-    setIsDark(!isDark);
-  };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,33 +48,12 @@ export default function SignUp() {
     }
 
     toast.success("Account created!");
-    navigate(selectedRole === "creator" ? "/dashboard/creator" : "/dashboard/user");
+    navigate(selectedRole === "creator" ? "/onboarding" : "/dashboard/user");
   };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-border glass-effect">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
-          <Link to="/">
-            <img alt="Plezyy Logo" className="h-10 w-auto dark:invert" src={plezyyLogo} />
-          </Link>
-          <div className="flex items-center gap-4">
-            <p className="text-sm text-muted-foreground hidden sm:block">
-              Already have an account?{" "}
-              <Link to="/sign-in" className="text-primary font-semibold hover:underline">
-                Log In
-              </Link>
-            </p>
-            <button
-              onClick={toggleDark}
-              className="p-2 rounded-full hover:bg-accent transition-colors"
-            >
-              {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-            </button>
-          </div>
-        </div>
-      </header>
+      <Navbar />
 
       {/* Main Content */}
       <main className="flex-1 flex items-center justify-center px-4 py-12">
@@ -236,7 +209,7 @@ export default function SignUp() {
       {/* Footer */}
       <footer className="border-t border-border py-6">
         <p className="text-center text-sm text-muted-foreground">
-          © 2024 Plezyy Inc. All rights reserved.
+          © 2026 Plezyy Inc. All rights reserved.
         </p>
       </footer>
     </div>

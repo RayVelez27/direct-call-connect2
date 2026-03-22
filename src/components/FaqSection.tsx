@@ -1,9 +1,5 @@
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+import { useState } from "react";
+import { ChevronDown } from "lucide-react";
 
 const faqs = [
   {
@@ -34,27 +30,46 @@ const faqs = [
 ];
 
 export default function FaqSection() {
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+
+  const toggle = (i: number) => {
+    setOpenIndex(openIndex === i ? null : i);
+  };
+
   return (
-    <section className="py-20 bg-background">
+    <section className="py-20 bg-white dark:bg-gray-900">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h2 className="text-3xl md:text-4xl font-bold text-foreground text-center mb-2 font-['Noto_Serif'] italic font-black">
+        <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white text-center mb-2 tracking-tight">
           Frequently Asked Questions
         </h2>
-        <p className="text-muted-foreground text-center mb-10">
+        <p className="text-gray-500 dark:text-gray-400 text-center mb-10">
           Everything you need to know before getting started.
         </p>
-        <Accordion type="single" collapsible className="w-full">
+        <div className="space-y-3">
           {faqs.map((faq, i) => (
-            <AccordionItem key={i} value={`item-${i}`}>
-              <AccordionTrigger className="text-left text-base">
+            <div
+              key={i}
+              className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden"
+            >
+              <button
+                onClick={() => toggle(i)}
+                className="w-full flex items-center justify-between px-6 py-4 text-left text-gray-900 dark:text-white font-medium text-base hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
                 {faq.question}
-              </AccordionTrigger>
-              <AccordionContent className="text-muted-foreground">
-                {faq.answer}
-              </AccordionContent>
-            </AccordionItem>
+                <ChevronDown
+                  className={`h-5 w-5 text-gray-400 shrink-0 transition-transform duration-200 ${
+                    openIndex === i ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+              {openIndex === i && (
+                <div className="px-6 pb-4 text-gray-600 dark:text-gray-300 text-sm leading-relaxed">
+                  {faq.answer}
+                </div>
+              )}
+            </div>
           ))}
-        </Accordion>
+        </div>
       </div>
     </section>
   );

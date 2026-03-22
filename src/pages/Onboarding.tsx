@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
+import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
 import plezyyLogo from "@/assets/plezyy-logo.jpeg";
 import categoriesData from "@/data/categories.json";
 
@@ -55,6 +57,87 @@ export default function Onboarding() {
   const [tagline, setTagline] = useState("");
   const [visibility, setVisibility] = useState<"public" | "members">("public");
   const [categorySearch, setCategorySearch] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  // Map frontend labels to DB enum values
+  const genderMap: Record<string, string> = {
+    "Female": "female",
+    "Male": "male",
+    "Non-binary": "non_binary",
+    "Trans": "trans",
+    "Prefer not to say": "prefer_not_to_say",
+  };
+  const sexPrefMap: Record<string, string> = {
+    "Straight": "straight",
+    "Bisexual": "bisexual",
+    "Lesbian": "lesbian",
+    "Gay": "gay",
+    "Pansexual": "pansexual",
+    "Other": "other",
+  };
+
+  const generateSlug = (name: string) =>
+    name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+  const saveProfile = async () => {
+    // Validation
+    if (!displayName.trim()) {
+      toast.error("Please enter a display name.");
+      return;
+    }
+    if (!dob) {
+      toast.error("Please enter your date of birth.");
+      return;
+    }
+    if (selectedCategories.length < 3) {
+      toast.error("Please select at least 3 categories.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        toast.error("You must be signed in.");
+        setSaving(false);
+        return;
+      }
+
+      const slug = generateSlug(displayName) + "-" + user.id.slice(0, 6);
+
+      const { error } = await supabase.from("creator_profiles").upsert(
+        {
+          user_id: user.id,
+          display_name: displayName.trim(),
+          date_of_birth: dob,
+          gender: genderMap[gender] || null,
+          nationality: nationality || null,
+          country_region: country || null,
+          sexual_preference: sexPrefMap[sexPref] || null,
+          categories: selectedCategories,
+          bio: bio.trim() || null,
+          tagline: tagline.trim() || null,
+          visibility: visibility === "members" ? "members_only" : "public",
+          slug,
+        },
+        { onConflict: "user_id" }
+      );
+
+      if (error) {
+        console.error("Profile save error:", error);
+        toast.error("Failed to save profile. Please try again.");
+        setSaving(false);
+        return;
+      }
+
+      toast.success("Profile saved!");
+      navigate("/onboarding-identity");
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      toast.error("Something went wrong.");
+      setSaving(false);
+    }
+  };
 
   const toggleCategory = (cat: string) => {
     setSelectedCategories((prev) =>
@@ -380,9 +463,10 @@ export default function Onboarding() {
             </Button>
             <Button
               className="rounded-xl font-semibold px-8"
-              onClick={() => navigate("/onboarding-identity")}
+              onClick={saveProfile}
+              disabled={saving}
             >
-              Continue to Verification
+              {saving ? "Saving..." : "Continue to Verification"}
             </Button>
           </div>
         </div>
@@ -391,7 +475,7 @@ export default function Onboarding() {
       {/* Footer */}
       <footer className="border-t border-border py-6 mt-8">
         <p className="text-center text-xs text-muted-foreground">
-          © 2024 Plezyy Inc. All rights reserved.
+          © 2026 Plezyy Inc. All rights reserved.
         </p>
       </footer>
     </div>

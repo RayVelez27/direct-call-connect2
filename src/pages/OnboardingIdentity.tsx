@@ -1,105 +1,58 @@
-import { useState, useRef } from "react";
-import { Link } from "react-router-dom";
-import { Shield, ChevronLeft, ChevronRight, Upload, ArrowLeft } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  Shield,
+  ArrowLeft,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  ExternalLink,
+  RefreshCw,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import plezyyLogo from "@/assets/plezyy-logo.jpeg";
+import { toast } from "sonner";
+import Navbar from "@/components/Navbar";
+
+const IDENFY_MAGIC_LINK =
+  "https://ivs.idenfy.com/api/v2/magic-link-redirect?token=RNMb3hSLQOKmvOrPxCMHt9fIAlVUX0Jjkx6vnRve";
 
 const steps = [
-  { icon: "person", label: "Identity" },
-  { icon: "location", label: "Address" },
-  { icon: "bank", label: "Bank Details" },
-  { icon: "verified", label: "Review" },
-];
-
-const daysOfWeek = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
-
-function getCalendarDays(year: number, month: number) {
-  const firstDay = new Date(year, month, 1).getDay();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const daysInPrevMonth = new Date(year, month, 0).getDate();
-
-  const days: { day: number; currentMonth: boolean }[] = [];
-
-  for (let i = firstDay - 1; i >= 0; i--) {
-    days.push({ day: daysInPrevMonth - i, currentMonth: false });
-  }
-  for (let i = 1; i <= daysInMonth; i++) {
-    days.push({ day: i, currentMonth: true });
-  }
-  const remaining = 42 - days.length;
-  for (let i = 1; i <= remaining; i++) {
-    days.push({ day: i, currentMonth: false });
-  }
-
-  return days;
-}
-
-const monthNames = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
+  { label: "Identity" },
+  { label: "Address" },
+  { label: "Bank Details" },
+  { label: "Review" },
 ];
 
 export default function OnboardingIdentity() {
-  const [calendarMonth, setCalendarMonth] = useState(0); // January
-  const [calendarYear, setCalendarYear] = useState(1990);
-  const [selectedDate, setSelectedDate] = useState<{ day: number; month: number; year: number } | null>(null);
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
 
-  const calendarDays = getCalendarDays(calendarYear, calendarMonth);
+  // Since iDenfy redirects back to /onboarding-identity with no query params,
+  // we track whether the user has been sent to iDenfy via sessionStorage
+  const [verificationStatus, setVerificationStatus] = useState<
+    "idle" | "pending" | "verified" | "rejected"
+  >("idle");
 
-  const prevMonth = () => {
-    if (calendarMonth === 0) {
-      setCalendarMonth(11);
-      setCalendarYear(calendarYear - 1);
-    } else {
-      setCalendarMonth(calendarMonth - 1);
+  useEffect(() => {
+    // Check if user was previously sent to iDenfy
+    const sent = sessionStorage.getItem("idenfy_verification_started");
+    if (sent === "true") {
+      // User has returned from iDenfy — show pending status
+      setVerificationStatus("pending");
+      sessionStorage.removeItem("idenfy_verification_started");
+      toast.success("Verification submitted! We'll review it shortly.");
     }
-  };
+  }, []);
 
-  const nextMonth = () => {
-    if (calendarMonth === 11) {
-      setCalendarMonth(0);
-      setCalendarYear(calendarYear + 1);
-    } else {
-      setCalendarMonth(calendarMonth + 1);
-    }
-  };
-
-  const handleFileDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (file) setUploadedFile(file);
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) setUploadedFile(file);
+  const handleStartVerification = () => {
+    // Mark that we're sending the user to iDenfy so we can detect their return
+    sessionStorage.setItem("idenfy_verification_started", "true");
+    window.location.href = IDENFY_MAGIC_LINK;
   };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-border glass-effect">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
-          <div className="flex items-center gap-3">
-            <Link to="/">
-              <img alt="Plezyy Logo" className="h-8 w-auto dark:invert" src={plezyyLogo} />
-            </Link>
-          </div>
-          <div className="flex items-center gap-4">
-            <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:block">
-              Need help?
-            </a>
-            <Button variant="outline" size="sm" className="rounded-lg font-semibold">
-              Save & Exit
-            </Button>
-          </div>
-        </div>
-      </header>
+      <Navbar />
 
       {/* Main Content */}
       <main className="flex-1 w-full max-w-4xl mx-auto px-4 py-8 sm:py-12">
@@ -131,160 +84,165 @@ export default function OnboardingIdentity() {
         <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-xl p-4 mb-8 max-w-2xl mx-auto">
           <Shield className="h-5 w-5 text-primary shrink-0" />
           <p className="text-sm text-muted-foreground">
-            Your data is encrypted and used only for identity verification in compliance with global financial standards.
+            Your data is encrypted and used only for identity verification in compliance with global
+            financial standards. Verification is powered by iDenfy.
           </p>
         </div>
 
         {/* Form Card */}
         <div className="max-w-2xl mx-auto bg-card border border-border rounded-2xl p-6 sm:p-8 shadow-sm">
           <div className="mb-6">
-            <h2 className="text-xl font-bold text-foreground">Identity & Verification</h2>
+            <h2 className="text-xl font-bold text-foreground">Identity Verification</h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Please provide your legal information as it appears on official government-issued documents. This helps us verify your identity and ensure secure payments.
+              We use iDenfy to securely verify your identity. You'll be redirected to complete a
+              quick ID check — just have your government-issued ID ready.
             </p>
           </div>
 
-          <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
-            {/* Full Legal Name */}
-            <div className="space-y-2">
-              <Label htmlFor="fullName">Full Legal Name</Label>
-              <Input
-                id="fullName"
-                type="text"
-                placeholder=""
-                className="h-12 rounded-xl"
-              />
-              <p className="text-xs text-muted-foreground">Include middle names if applicable.</p>
-            </div>
-
-            {/* Date of Birth - Custom Calendar */}
-            <div className="space-y-2">
-              <Label>Date of Birth</Label>
-              <div className="border border-border rounded-xl p-4">
-                {/* Month/Year Nav */}
-                <div className="flex items-center justify-between mb-4">
-                  <button
-                    type="button"
-                    onClick={prevMonth}
-                    className="p-1 rounded-lg hover:bg-accent transition-colors"
-                  >
-                    <ChevronLeft className="h-5 w-5 text-muted-foreground" />
-                  </button>
-                  <span className="text-sm font-semibold text-foreground">
-                    {monthNames[calendarMonth]} {calendarYear}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={nextMonth}
-                    className="p-1 rounded-lg hover:bg-accent transition-colors"
-                  >
-                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                  </button>
-                </div>
-
-                {/* Day Headers */}
-                <div className="grid grid-cols-7 gap-1 mb-1">
-                  {daysOfWeek.map((d) => (
-                    <div key={d} className="text-center text-xs font-medium text-muted-foreground py-1">
-                      {d}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Days Grid */}
-                <div className="grid grid-cols-7 gap-1">
-                  {calendarDays.map((d, i) => {
-                    const isSelected =
-                      selectedDate?.day === d.day &&
-                      selectedDate?.month === calendarMonth &&
-                      selectedDate?.year === calendarYear &&
-                      d.currentMonth;
-                    return (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() =>
-                          d.currentMonth &&
-                          setSelectedDate({ day: d.day, month: calendarMonth, year: calendarYear })
-                        }
-                        className={`h-9 w-full rounded-lg text-sm transition-colors ${
-                          !d.currentMonth
-                            ? "text-muted-foreground/40"
-                            : isSelected
-                            ? "bg-primary text-primary-foreground font-semibold"
-                            : "text-foreground hover:bg-accent"
-                        }`}
-                      >
-                        {d.day}
-                      </button>
-                    );
-                  })}
-                </div>
+          {/* Verified State */}
+          {verificationStatus === "verified" && (
+            <div className="space-y-6">
+              <div className="border border-green-500/30 bg-green-500/5 rounded-xl p-6 text-center">
+                <CheckCircle2 className="h-10 w-10 text-green-500 mx-auto mb-3" />
+                <p className="font-semibold text-green-700 dark:text-green-400 text-lg">
+                  Identity Verified
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Your identity has been confirmed. You can proceed to the next step.
+                </p>
+              </div>
+              <div className="flex justify-between items-center pt-4">
+                <Button variant="ghost" className="gap-2 text-muted-foreground" asChild>
+                  <Link to="/onboarding">
+                    <ArrowLeft className="h-4 w-4" />
+                    Back
+                  </Link>
+                </Button>
+                <Button
+                  className="rounded-xl font-semibold px-6"
+                  onClick={() => navigate("/onboarding-payouts")}
+                >
+                  Continue to Address
+                </Button>
               </div>
             </div>
+          )}
 
-            {/* Government ID Upload */}
-            <div className="space-y-2">
-              <Label>Government ID</Label>
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={handleFileDrop}
-                className="border-2 border-dashed border-border rounded-xl p-8 text-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors"
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".jpg,.jpeg,.png,.pdf"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
-                <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
-                {uploadedFile ? (
-                  <p className="text-sm font-medium text-foreground">{uploadedFile.name}</p>
-                ) : (
-                  <>
-                    <p className="text-sm font-medium text-foreground">Upload your ID document</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Drag & drop or click to upload. We accept Passport, Driver's License or National ID.
-                    </p>
-                  </>
-                )}
-                <div className="flex justify-center gap-2 mt-3">
-                  {["JPG", "PNG", "PDF"].map((fmt) => (
-                    <span
-                      key={fmt}
-                      className="text-[10px] font-semibold bg-muted text-muted-foreground px-2 py-0.5 rounded"
-                    >
-                      {fmt}
-                    </span>
-                  ))}
-                </div>
+          {/* Pending State */}
+          {verificationStatus === "pending" && (
+            <div className="space-y-6">
+              <div className="border border-yellow-500/30 bg-yellow-500/5 rounded-xl p-6 text-center">
+                <Clock className="h-10 w-10 text-yellow-500 mx-auto mb-3" />
+                <p className="font-semibold text-yellow-700 dark:text-yellow-400 text-lg">
+                  Verification Submitted
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Your identity is being reviewed. This usually takes a few minutes. You can
+                  continue setting up your profile while we process your verification.
+                </p>
+              </div>
+              <div className="flex justify-between items-center pt-4">
+                <Button variant="ghost" className="gap-2 text-muted-foreground" asChild>
+                  <Link to="/onboarding">
+                    <ArrowLeft className="h-4 w-4" />
+                    Back
+                  </Link>
+                </Button>
+                <Button
+                  className="rounded-xl font-semibold px-6"
+                  onClick={() => navigate("/onboarding-payouts")}
+                >
+                  Continue to Address
+                </Button>
               </div>
             </div>
+          )}
 
-            {/* Actions */}
-            <div className="flex justify-between items-center pt-4">
-              <Button variant="ghost" className="gap-2 text-muted-foreground" asChild>
-                <Link to="/sign-up">
-                  <ArrowLeft className="h-4 w-4" />
-                  Back
-                </Link>
-              </Button>
-              <Button className="rounded-xl font-semibold px-6">
-                Continue to Address
-              </Button>
+          {/* Rejected State */}
+          {verificationStatus === "rejected" && (
+            <div className="space-y-6">
+              <div className="border border-red-500/30 bg-red-500/5 rounded-xl p-6 text-center">
+                <XCircle className="h-10 w-10 text-red-500 mx-auto mb-3" />
+                <p className="font-semibold text-red-700 dark:text-red-400 text-lg">
+                  Verification Failed
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  We couldn't verify your identity. Please try again with a valid government-issued
+                  ID.
+                </p>
+              </div>
+
+              <VerifyButton onClick={handleStartVerification} />
+
+              <div className="flex justify-between items-center pt-4">
+                <Button variant="ghost" className="gap-2 text-muted-foreground" asChild>
+                  <Link to="/onboarding">
+                    <ArrowLeft className="h-4 w-4" />
+                    Back
+                  </Link>
+                </Button>
+              </div>
             </div>
-          </form>
+          )}
+
+          {/* Idle State — Initial */}
+          {verificationStatus === "idle" && (
+            <div className="space-y-6">
+              {/* How it works */}
+              <div className="bg-muted/50 rounded-xl p-4 space-y-3">
+                <p className="text-sm font-medium text-foreground">How verification works:</p>
+                <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
+                  <li>
+                    Click the button below — you'll be redirected to our verification partner
+                  </li>
+                  <li>
+                    Take a photo of your government-issued ID (passport, driver's license, or
+                    national ID)
+                  </li>
+                  <li>Take a quick selfie for liveness verification</li>
+                  <li>You'll be redirected back here once complete</li>
+                </ol>
+              </div>
+
+              <VerifyButton onClick={handleStartVerification} />
+
+              <p className="text-xs text-center text-muted-foreground">
+                You'll be securely redirected to iDenfy to complete verification.
+                <br />
+                Your documents are processed securely and never stored on our servers.
+              </p>
+
+              <div className="flex justify-between items-center pt-4">
+                <Button variant="ghost" className="gap-2 text-muted-foreground" asChild>
+                  <Link to="/onboarding">
+                    <ArrowLeft className="h-4 w-4" />
+                    Back
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </main>
 
       {/* Footer */}
       <footer className="border-t border-border py-6 mt-8">
         <p className="text-center text-xs text-muted-foreground">
-          © 2024 Plezyy Inc. All rights reserved. Identity verification powered by secure encryption.
+          &copy; 2025 Plezyy Inc. All rights reserved. Identity verification powered by iDenfy.
         </p>
       </footer>
     </div>
+  );
+}
+
+function VerifyButton({ onClick }: { onClick: () => void }) {
+  return (
+    <Button
+      onClick={onClick}
+      className="w-full h-12 rounded-xl font-semibold text-base gap-2"
+    >
+      <ExternalLink className="h-4 w-4" />
+      Verify My Identity
+    </Button>
   );
 }

@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import IndexArchive from "./pages/IndexArchive";
 import SignIn from "./pages/SignIn";
@@ -39,7 +39,7 @@ const App = () => (
           <Route path="/onboarding-identity" element={<OnboardingIdentity />} />
           <Route path="/onboarding-payouts" element={<OnboardingPayouts />} />
           <Route path="/create-service" element={<CreateService />} />
-          <Route path="/explore" element={<Explore />} />
+          <Route path="/explore" element={<Navigate to="/discovery" replace />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
           <Route path="/service-post" element={<ServicePost />} />
           <Route path="/dashboard/user" element={<UserDashboard />} />

@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
+import Navbar from "@/components/Navbar";
 import plezyyLogo from "@/assets/plezyy-logo.jpeg";
 
 export default function SignIn() {
@@ -36,12 +37,12 @@ export default function SignIn() {
   };
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-2">
+    <div className="min-h-screen flex flex-col">
+      <Navbar />
+      <div className="flex-1 grid lg:grid-cols-2">
       {/* Left Panel */}
       <div className="hidden lg:flex flex-col justify-between bg-primary p-12 text-primary-foreground">
-        <Link to="/">
-          <img alt="Plezyy Logo" className="h-10 w-auto brightness-0 invert" src={plezyyLogo} />
-        </Link>
+        <div />
         <div>
           <h1 className="text-4xl font-bold leading-tight mb-4">
             Connect with expertise, instantly.
@@ -50,7 +51,7 @@ export default function SignIn() {
             Join thousands of people who get professional advice through direct, paid phone calls on Plezyy.
           </p>
         </div>
-        <p className="text-sm text-primary-foreground/60">© 2024 Plezyy Inc.</p>
+        <p className="text-sm text-primary-foreground/60">© 2026 Plezyy Inc.</p>
       </div>
 
       {/* Right Panel */}
@@ -151,11 +152,12 @@ export default function SignIn() {
 
           <p className="text-center text-sm text-muted-foreground">
             New to Plezyy?{" "}
-            <a href="#" className="text-primary font-semibold hover:underline">
+            <Link to="/sign-up" className="text-primary font-semibold hover:underline">
               Create an account
-            </a>
+            </Link>
           </p>
         </div>
+      </div>
       </div>
     </div>
   );

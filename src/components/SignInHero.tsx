@@ -50,7 +50,7 @@ export default function SignInHero() {
             Join thousands of people who get professional advice through direct, paid phone calls on Plezyy.
           </p>
         </div>
-        <p className="text-sm text-primary-foreground/60">© 2024 Plezyy Inc.</p>
+        <p className="text-sm text-primary-foreground/60">© 2026 Plezyy Inc.</p>
       </div>
 
       {/* Right Panel */}
