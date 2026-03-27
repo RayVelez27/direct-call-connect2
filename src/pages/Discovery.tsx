@@ -1,5 +1,8 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { supabase } from "@/lib/supabase";
+import { useFavorites } from "@/contexts/FavoritesContext";
+import { useConversations } from "@/contexts/ConversationsContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -1260,11 +1263,11 @@ const ageRangeOptions = ["18-25", "26-35", "36-45", "46+"];
 const languageOptions = ["English", "French", "Spanish", "German", "Italian", "Portuguese"];
 
 export function DiscoveryContent() {
+  const navigate = useNavigate();
+  const { favorites, addFavorite, removeFavorite, isFavorite } = useFavorites();
+  const { conversations, startConversation } = useConversations();
   const [searchQuery, setSearchQuery] = useState("");
-  const [liked, setLiked] = useState<Set<number>>(new Set());
-  const [likedCreators, setLikedCreators] = useState<Creator[]>([]);
   const [favPulse, setFavPulse] = useState(false);
-  const [chatCreators, setChatCreators] = useState<Creator[]>([]);
   const [chatPulse, setChatPulse] = useState(false);
   const [activeChatCreator, setActiveChatCreator] = useState<Creator | null>(null);
   const [activeProfileCreator, setActiveProfileCreator] = useState<Creator | null>(null);
@@ -1277,29 +1280,69 @@ export function DiscoveryContent() {
   const [selectedLanguage, setSelectedLanguage] = useState("English");
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
 
-  const handleCreatorLiked = useCallback((creator: Creator) => {
-    setLiked((prev) => {
-      const next = new Set(prev);
-      next.add(creator.id);
-      return next;
+  // Auth gating
+  const [isSignedIn, setIsSignedIn] = useState<boolean | null>(null);
+  const [swipeCount, setSwipeCount] = useState(0);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const FREE_SWIPE_LIMIT = 5;
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setIsSignedIn(!!session);
     });
-    setLikedCreators((prev) => {
-      if (prev.some((c) => c.id === creator.id)) return prev;
-      return [creator, ...prev];
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsSignedIn(!!session);
     });
-    // Pulse the favorites tab
-    setFavPulse(true);
-    setTimeout(() => setFavPulse(false), 1000);
+    return () => subscription.unsubscribe();
   }, []);
 
+  const requireAuth = useCallback((action?: () => void) => {
+    if (isSignedIn) {
+      action?.();
+    } else {
+      setShowAuthModal(true);
+    }
+  }, [isSignedIn]);
+
+  // Track swipes for non-logged-in users
+  const handleSwipeGate = useCallback(() => {
+    if (isSignedIn) return false; // no gate
+    const next = swipeCount + 1;
+    setSwipeCount(next);
+    if (next >= FREE_SWIPE_LIMIT) {
+      setShowAuthModal(true);
+      return true; // blocked
+    }
+    return false;
+  }, [isSignedIn, swipeCount]);
+
+  const handleCreatorLiked = useCallback((creator: Creator) => {
+    addFavorite({
+      id: creator.id,
+      name: creator.name,
+      initials: creator.initials,
+      tagline: creator.tagline,
+      images: creator.images,
+      online: creator.online,
+      price: creator.price,
+      per: creator.per,
+      location: creator.location,
+    });
+    setFavPulse(true);
+    setTimeout(() => setFavPulse(false), 1000);
+  }, [addFavorite]);
+
   const handleCreatorChat = useCallback((creator: Creator) => {
-    setChatCreators((prev) => {
-      if (prev.some((c) => c.id === creator.id)) return prev;
-      return [creator, ...prev];
+    startConversation({
+      id: creator.id,
+      name: creator.name,
+      initials: creator.initials,
+      images: creator.images,
+      online: creator.online,
     });
     setChatPulse(true);
     setTimeout(() => setChatPulse(false), 1000);
-  }, []);
+  }, [startConversation]);
 
   const toggleCategory = (name: string) => {
     setSelectedCategories((prev) => {
@@ -1319,14 +1362,6 @@ export function DiscoveryContent() {
     });
   };
 
-  const toggleLike = (id: number) => {
-    setLiked((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
 
   return (
     <section className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col" style={{ height: "calc(100vh - 64px)" }}>
@@ -1362,7 +1397,13 @@ export function DiscoveryContent() {
             {(["filter", "chat", "favorite"] as const).map((tab) => (
               <button
                 key={tab}
-                onClick={() => setSidebarTab(tab)}
+                onClick={() => {
+                  if ((tab === "chat" || tab === "favorite") && !isSignedIn) {
+                    setShowAuthModal(true);
+                    return;
+                  }
+                  setSidebarTab(tab);
+                }}
                 className={`relative flex-1 pb-2.5 text-sm font-bold capitalize transition-colors border-b-2 ${
                   sidebarTab === tab
                     ? "border-primary text-primary"
@@ -1370,14 +1411,14 @@ export function DiscoveryContent() {
                 } ${tab === "favorite" && favPulse ? "animate-bounce" : ""} ${tab === "chat" && chatPulse ? "animate-bounce" : ""}`}
               >
                 {tab === "filter" ? "Filter" : tab === "chat" ? "Chat" : "Favorite"}
-                {tab === "chat" && chatCreators.length > 0 && (
+                {tab === "chat" && conversations.length > 0 && (
                   <span className={`absolute -top-1 right-1 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-blue-500 text-white text-[10px] font-bold px-1 ${chatPulse ? "scale-125" : "scale-100"} transition-transform duration-300`}>
-                    {chatCreators.length}
+                    {conversations.length}
                   </span>
                 )}
-                {tab === "favorite" && likedCreators.length > 0 && (
+                {tab === "favorite" && favorites.length > 0 && (
                   <span className={`absolute -top-1 right-1 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-rose-500 text-white text-[10px] font-bold px-1 ${favPulse ? "scale-125" : "scale-100"} transition-transform duration-300`}>
-                    {likedCreators.length}
+                    {favorites.length}
                   </span>
                 )}
               </button>
@@ -1483,7 +1524,7 @@ export function DiscoveryContent() {
 
           {/* Chat Tab */}
           {sidebarTab === "chat" && (
-            chatCreators.length === 0 ? (
+            conversations.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <MessageCircle className="h-10 w-10 text-muted-foreground/40 mb-3" />
                 <p className="text-sm font-semibold text-muted-foreground">No conversations yet</p>
@@ -1491,54 +1532,50 @@ export function DiscoveryContent() {
               </div>
             ) : (
               <div className="space-y-2">
-                {chatCreators.map((creator, idx) => (
-                  <div
-                    key={creator.id}
-                    onClick={() => setActiveChatCreator(creator)}
-                    className={`flex items-center gap-3 p-2.5 rounded-xl hover:bg-accent/50 transition-all cursor-pointer animate-[favSlideIn_0.4s_ease-out_both] ${
-                      activeChatCreator?.id === creator.id ? "bg-accent ring-1 ring-primary/30" : ""
-                    }`}
-                    style={{ animationDelay: `${idx * 60}ms` }}
-                  >
-                    <div className="relative shrink-0">
-                      {creator.images?.[0] ? (
-                        <img
-                          src={creator.images[0]}
-                          alt={creator.name}
-                          className="h-11 w-11 rounded-full object-cover ring-2 ring-blue-400/50"
-                        />
-                      ) : (
-                        <div className="h-11 w-11 rounded-full bg-primary/20 flex items-center justify-center ring-2 ring-blue-400/50">
-                          <span className="text-xs font-bold text-primary">{creator.initials}</span>
-                        </div>
-                      )}
-                      {creator.online && (
-                        <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-background" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate">{creator.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">Tap to open chat</p>
-                    </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setChatCreators((prev) => prev.filter((c) => c.id !== creator.id));
-                        if (activeChatCreator?.id === creator.id) setActiveChatCreator(null);
-                      }}
-                      className="shrink-0 h-6 w-6 rounded-full flex items-center justify-center text-muted-foreground/50 hover:bg-blue-100 hover:text-blue-500 transition-colors"
+                {conversations.map((convo, idx) => {
+                  // Find full creator data from mock list for chat view
+                  const fullCreator = creators.find((c) => c.id === convo.creatorId);
+                  return (
+                    <div
+                      key={convo.creatorId}
+                      onClick={() => { if (fullCreator) setActiveChatCreator(fullCreator); }}
+                      className={`flex items-center gap-3 p-2.5 rounded-xl hover:bg-accent/50 transition-all cursor-pointer animate-[favSlideIn_0.4s_ease-out_both] ${
+                        activeChatCreator?.id === convo.creatorId ? "bg-accent ring-1 ring-primary/30" : ""
+                      }`}
+                      style={{ animationDelay: `${idx * 60}ms` }}
                     >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ))}
+                      <div className="relative shrink-0">
+                        {convo.creatorImage ? (
+                          <img
+                            src={convo.creatorImage}
+                            alt={convo.creatorName}
+                            className="h-11 w-11 rounded-full object-cover ring-2 ring-blue-400/50"
+                          />
+                        ) : (
+                          <div className="h-11 w-11 rounded-full bg-primary/20 flex items-center justify-center ring-2 ring-blue-400/50">
+                            <span className="text-xs font-bold text-primary">{convo.creatorInitials}</span>
+                          </div>
+                        )}
+                        {convo.creatorOnline && (
+                          <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-background" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-foreground truncate">{convo.creatorName}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {convo.messages.length > 0 ? convo.messages[convo.messages.length - 1].content : "Tap to open chat"}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )
           )}
 
           {/* Favorite Tab */}
           {sidebarTab === "favorite" && (
-            likedCreators.length === 0 ? (
+            favorites.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <Heart className="h-10 w-10 text-muted-foreground/40 mb-3" />
                 <p className="text-sm font-semibold text-muted-foreground">No favorites yet</p>
@@ -1546,7 +1583,7 @@ export function DiscoveryContent() {
               </div>
             ) : (
               <div className="space-y-2">
-                {likedCreators.map((creator, idx) => (
+                {favorites.map((creator, idx) => (
                   <div
                     key={creator.id}
                     className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-accent/50 transition-all cursor-pointer animate-[favSlideIn_0.4s_ease-out_both]"
@@ -1575,8 +1612,7 @@ export function DiscoveryContent() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        setLikedCreators((prev) => prev.filter((c) => c.id !== creator.id));
-                        setLiked((prev) => { const next = new Set(prev); next.delete(creator.id); return next; });
+                        removeFavorite(creator.id);
                       }}
                       className="shrink-0 h-6 w-6 rounded-full flex items-center justify-center text-muted-foreground/50 hover:bg-rose-100 hover:text-rose-500 transition-colors"
                     >
@@ -1610,11 +1646,56 @@ export function DiscoveryContent() {
             <ChatView creator={activeChatCreator} onBack={() => setActiveChatCreator(null)} />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center">
-              <SwipeView creators={creators} onLike={handleCreatorLiked} onChat={handleCreatorChat} onViewProfile={setActiveProfileCreator} />
+              <SwipeView
+                creators={creators}
+                onLike={handleCreatorLiked}
+                onChat={(c) => requireAuth(() => handleCreatorChat(c))}
+                onViewProfile={setActiveProfileCreator}
+                onSwipeAttempt={handleSwipeGate}
+              />
             </div>
           )}
         </div>
       </div>
+
+      {/* Auth gate modal */}
+      {showAuthModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowAuthModal(false)}>
+          <div
+            className="relative bg-card border border-border rounded-2xl shadow-2xl max-w-sm w-full mx-4 p-8 text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setShowAuthModal(false)}
+              className="absolute top-3 right-3 p-1.5 rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <div className="mx-auto mb-4 h-14 w-14 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, #FF9A3C, #FF7AA2, #D85BFF, #8A5CFF)" }}>
+              <Heart className="h-7 w-7 text-white" />
+            </div>
+            <h3 className="text-xl font-bold text-foreground">Join Plezyy</h3>
+            <p className="text-sm text-muted-foreground mt-2">
+              Sign up for free to like creators, chat, save favorites, and unlock unlimited browsing.
+            </p>
+            <div className="mt-6 space-y-3">
+              <Link
+                to="/sign-up"
+                className="block w-full py-2.5 rounded-full text-white text-sm font-semibold hover:opacity-90 transition-opacity"
+                style={{ background: "linear-gradient(135deg, #FF9A3C, #FF7AA2, #D85BFF, #8A5CFF)" }}
+              >
+                Sign Up Free
+              </Link>
+              <Link
+                to="/sign-in"
+                className="block w-full py-2.5 rounded-full border border-border text-sm font-semibold text-foreground hover:bg-accent transition-colors"
+              >
+                Already have an account? Sign In
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -1639,7 +1720,7 @@ interface SwipeDragState {
   transitioning: boolean;
 }
 
-function SwipeView({ creators: initialCreators, onLike, onChat, onViewProfile }: { creators: Creator[]; onLike?: (creator: Creator) => void; onChat?: (creator: Creator) => void; onViewProfile?: (creator: Creator) => void }) {
+function SwipeView({ creators: initialCreators, onLike, onChat, onViewProfile, onSwipeAttempt }: { creators: Creator[]; onLike?: (creator: Creator) => void; onChat?: (creator: Creator) => void; onViewProfile?: (creator: Creator) => void; onSwipeAttempt?: () => boolean }) {
   const [cards, setCards] = useState<Creator[]>([...initialCreators].reverse());
   const [topDragX, setTopDragX] = useState(0);
   const [lastAction, setLastAction] = useState<string | null>(null);
@@ -1654,61 +1735,114 @@ function SwipeView({ creators: initialCreators, onLike, onChat, onViewProfile }:
     setLastAction(null);
   };
 
-  const forceSwipe = (dir: "left" | "right") => {
-    if (dir === "right" && cards.length > 0) {
-      onLike?.(cards[cards.length - 1]);
-    }
+  const forceSwipe = useCallback((dir: "left" | "right") => {
+    if (onSwipeAttempt?.()) return; // blocked by auth gate
+    setCards((prev) => {
+      if (prev.length === 0) return prev;
+      if (dir === "right") onLike?.(prev[prev.length - 1]);
+      return prev;
+    });
     setTopDragX(dir === "right" ? 300 : -300);
     setTimeout(() => {
       setLastAction(dir === "right" ? "Liked" : "Passed");
       removeTop();
     }, 50);
-  };
+  }, [onLike, removeTop, onSwipeAttempt]);
+
+  // Neutral skip — just moves to the next card without liking/passing
+  const skipCard = useCallback(() => {
+    if (cards.length === 0) return;
+    if (onSwipeAttempt?.()) return; // blocked by auth gate
+    setTopDragX(-300);
+    setTimeout(() => {
+      setLastAction(null);
+      removeTop();
+    }, 50);
+  }, [cards.length, removeTop, onSwipeAttempt]);
+
+  // Keyboard arrow support — arrows skip neutrally
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (cards.length === 0) return;
+      if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+        e.preventDefault();
+        skipCard();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [cards.length, skipCard]);
 
   return (
     <div className="flex flex-col items-center w-full max-w-[440px]">
-      {/* Card stack */}
-      <div className="relative w-full" style={{ height: "min(616px, 77vh)" }}>
-        {cards.length === 0 ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-            <div className="rounded-full bg-black/5 p-5 mb-4">
-              <Sparkles className="h-10 w-10 text-muted-foreground/40" />
+      {/* Card stack with flanking arrows */}
+      <div className="relative w-full flex items-center">
+        {/* Left arrow — Skip */}
+        {cards.length > 0 && (
+          <button
+            onClick={skipCard}
+            className="hidden md:flex absolute -left-16 top-1/2 -translate-y-1/2 z-20 items-center justify-center w-11 h-11 rounded-full border border-border bg-card/80 backdrop-blur-sm text-muted-foreground hover:text-foreground hover:border-foreground/30 hover:bg-accent shadow-sm transition-all duration-200 hover:scale-110 active:scale-95"
+            aria-label="Previous creator"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+        )}
+
+        <div className="relative w-full" style={{ height: "min(616px, 77vh)" }}>
+          {cards.length === 0 ? (
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+              <div className="rounded-full bg-black/5 p-5 mb-4">
+                <Sparkles className="h-10 w-10 text-muted-foreground/40" />
+              </div>
+              <h3 className="text-lg font-bold text-foreground">You've seen everyone</h3>
+              <p className="text-sm text-muted-foreground mt-1 max-w-xs">
+                No more creators to show. Reset to swipe through them again.
+              </p>
+              <Button onClick={resetCards} className="mt-4 gap-2">
+                <RotateCcw className="h-4 w-4" />
+                Start Over
+              </Button>
             </div>
-            <h3 className="text-lg font-bold text-foreground">You've seen everyone</h3>
-            <p className="text-sm text-muted-foreground mt-1 max-w-xs">
-              No more creators to show. Reset to swipe through them again.
-            </p>
-            <Button onClick={resetCards} className="mt-4 gap-2">
-              <RotateCcw className="h-4 w-4" />
-              Start Over
-            </Button>
-          </div>
-        ) : (
-          cards.map((creator, i) => {
-            const isTop = i === cards.length - 1;
-            const isBehind = i === cards.length - 2;
-            // Only render the top card and the one directly behind it
-            if (!isTop && !isBehind) return null;
-            return (
-              <SwipeCard
-                key={creator.id}
-                creator={creator}
-                isTop={isTop}
-                behindTopAbsX={isBehind ? Math.abs(topDragX) : 0}
-                onRemove={() => {
-                  removeTop();
-                }}
-                onDragX={isTop ? setTopDragX : undefined}
-                onSwipe={(dir) => {
-                  setLastAction(dir === "right" ? "Liked" : "Passed");
-                  if (dir === "right") onLike?.(creator);
-                }}
-                onForceSwipe={isTop ? forceSwipe : undefined}
-                onChat={() => onChat?.(creator)}
-                onViewProfile={() => onViewProfile?.(creator)}
-              />
-            );
-          })
+          ) : (
+            cards.map((creator, i) => {
+              const isTop = i === cards.length - 1;
+              const isBehind = i === cards.length - 2;
+              // Only render the top card and the one directly behind it
+              if (!isTop && !isBehind) return null;
+              return (
+                <SwipeCard
+                  key={creator.id}
+                  creator={creator}
+                  isTop={isTop}
+                  behindTopAbsX={isBehind ? Math.abs(topDragX) : 0}
+                  onRemove={() => {
+                    if (onSwipeAttempt?.()) return;
+                    removeTop();
+                  }}
+                  onDragX={isTop ? setTopDragX : undefined}
+                  onSwipe={(dir) => {
+                    if (onSwipeAttempt?.()) return;
+                    setLastAction(dir === "right" ? "Liked" : "Passed");
+                    if (dir === "right") onLike?.(creator);
+                  }}
+                  onForceSwipe={isTop ? forceSwipe : undefined}
+                  onChat={() => onChat?.(creator)}
+                  onViewProfile={() => onViewProfile?.(creator)}
+                />
+              );
+            })
+          )}
+        </div>
+
+        {/* Right arrow — Skip */}
+        {cards.length > 0 && (
+          <button
+            onClick={skipCard}
+            className="hidden md:flex absolute -right-16 top-1/2 -translate-y-1/2 z-20 items-center justify-center w-11 h-11 rounded-full border border-border bg-card/80 backdrop-blur-sm text-muted-foreground hover:text-foreground hover:border-foreground/30 hover:bg-accent shadow-sm transition-all duration-200 hover:scale-110 active:scale-95"
+            aria-label="Next creator"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
         )}
       </div>
 
@@ -2383,8 +2517,8 @@ function ProfileView({
   return (
     <div className="absolute inset-0 flex flex-col bg-white rounded-2xl overflow-hidden">
       {lightboxModal}
-      {/* Header bar */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-black/10 shrink-0">
+      {/* Header bar — sticky on desktop, scrolls away on mobile */}
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-black/10 shrink-0 hidden md:flex">
         <button
           onClick={onBack}
           className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-black/5 transition-colors"
@@ -2409,15 +2543,25 @@ function ProfileView({
         </div>
       </div>
 
-      {/* ── MOBILE: single-column scroll ── */}
+      {/* ── MOBILE: single-column scroll (header scrolls with content) ── */}
       <div className="flex-1 overflow-y-auto md:hidden">
+        {/* Mobile back bar */}
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-black/10">
+          <button
+            onClick={onBack}
+            className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-black/5 transition-colors"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <p className="text-sm font-bold text-foreground">{creator.name}</p>
+        </div>
         <div className="p-4 space-y-5">
           {galleryBlock}
           {identityBlock}
           {actionsBlock}
           {bioBlock}
-          {reviewBlock}
           {servicesBlock}
+          {reviewBlock}
         </div>
       </div>
 
@@ -2430,11 +2574,11 @@ function ProfileView({
           {actionsBlock}
         </div>
 
-        {/* Right column — scrollable bio, review, services */}
+        {/* Right column — scrollable bio, services, reviews */}
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
           {bioBlock}
-          {reviewBlock}
           {servicesBlock}
+          {reviewBlock}
         </div>
       </div>
     </div>

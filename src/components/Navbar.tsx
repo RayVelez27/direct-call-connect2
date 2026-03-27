@@ -1,7 +1,8 @@
-import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { Moon, Sun, Menu, X } from "lucide-react";
-import plezyyLogo from "@/assets/Untitled design - 2026-03-15T061848.986.png";
+import { useState, useEffect } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Menu, X, UserCircle } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import plezyyLogo from "@/assets/Untitled design - 2026-03-27T091410.050.png";
 
 const navLinks = [
   { label: "Explore", href: "/discovery", matchPaths: ["/discovery"] },
@@ -10,12 +11,23 @@ const navLinks = [
 
 export default function Navbar() {
   const location = useLocation();
-  const [isDark, setIsDark] = useState(false);
+  const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isSignedIn, setIsSignedIn] = useState(false);
 
-  const toggleDark = () => {
-    document.documentElement.classList.toggle("dark");
-    setIsDark(!isDark);
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setIsSignedIn(!!session);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsSignedIn(!!session);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    navigate("/");
   };
 
   return (
@@ -46,24 +58,38 @@ export default function Navbar() {
                 </Link>
               );
             })}
-            <Link
-              to="/sign-up"
-              className="px-5 py-2 rounded-full bg-[#4180FB] dark:bg-[#5A96FC] text-white text-sm font-semibold hover:bg-[#3268D4] dark:hover:bg-[#7AAFFD] transition-all duration-200 shadow-sm hover:shadow-md"
-            >
-              Join Now
-            </Link>
-            <Link
-              to="/sign-in"
-              className="text-sm font-semibold text-gray-700 dark:text-gray-300 hover:text-[#4180FB] dark:hover:text-[#7AAFFD] transition-colors"
-            >
-              Sign In
-            </Link>
-            <button
-              onClick={toggleDark}
-              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400"
-            >
-              {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-            </button>
+            {isSignedIn ? (
+              <>
+                <button
+                  onClick={handleSignOut}
+                  className="text-sm font-semibold text-gray-700 dark:text-gray-300 hover:text-[#4180FB] dark:hover:text-[#7AAFFD] transition-colors"
+                >
+                  Sign Out
+                </button>
+                <Link
+                  to="/dashboard/creator"
+                  className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400"
+                >
+                  <UserCircle className="h-6 w-6" />
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link
+                  to="/sign-up"
+                  className="px-5 py-2 rounded-full text-white text-sm font-semibold transition-all duration-200 shadow-sm hover:shadow-md hover:opacity-90"
+                  style={{ background: "linear-gradient(135deg, #FF9A3C, #FF7AA2, #D85BFF, #8A5CFF)" }}
+                >
+                  Join Now
+                </Link>
+                <Link
+                  to="/sign-in"
+                  className="text-sm font-semibold text-gray-700 dark:text-gray-300 hover:text-[#4180FB] dark:hover:text-[#7AAFFD] transition-colors"
+                >
+                  Sign In
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -98,27 +124,42 @@ export default function Navbar() {
               </Link>
             );
           })}
-          <Link
-            to="/sign-up"
-            onClick={() => setMobileOpen(false)}
-            className="block w-full text-center px-5 py-3 rounded-full bg-[#4180FB] dark:bg-[#5A96FC] text-white text-lg font-semibold hover:bg-[#3268D4] transition-colors"
-          >
-            Join Now
-          </Link>
-          <Link
-            to="/sign-in"
-            onClick={() => setMobileOpen(false)}
-            className="block text-lg font-semibold text-gray-700 dark:text-gray-300 hover:text-[#4180FB] transition-colors"
-          >
-            Sign In
-          </Link>
-          <button
-            onClick={() => { toggleDark(); setMobileOpen(false); }}
-            className="flex items-center gap-2 text-lg text-gray-700 dark:text-gray-300"
-          >
-            {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-            {isDark ? "Light Mode" : "Dark Mode"}
-          </button>
+          {isSignedIn ? (
+            <>
+              <Link
+                to="/dashboard/creator"
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center gap-2 text-lg font-semibold text-gray-700 dark:text-gray-300 hover:text-[#4180FB] transition-colors"
+              >
+                <UserCircle className="h-5 w-5" />
+                Dashboard
+              </Link>
+              <button
+                onClick={() => { handleSignOut(); setMobileOpen(false); }}
+                className="block text-lg font-semibold text-gray-700 dark:text-gray-300 hover:text-[#4180FB] transition-colors"
+              >
+                Sign Out
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                to="/sign-up"
+                onClick={() => setMobileOpen(false)}
+                className="block w-full text-center px-5 py-3 rounded-full text-white text-lg font-semibold transition-colors hover:opacity-90"
+                style={{ background: "linear-gradient(135deg, #FF9A3C, #FF7AA2, #D85BFF, #8A5CFF)" }}
+              >
+                Join Now
+              </Link>
+              <Link
+                to="/sign-in"
+                onClick={() => setMobileOpen(false)}
+                className="block text-lg font-semibold text-gray-700 dark:text-gray-300 hover:text-[#4180FB] transition-colors"
+              >
+                Sign In
+              </Link>
+            </>
+          )}
         </div>
       )}
     </nav>

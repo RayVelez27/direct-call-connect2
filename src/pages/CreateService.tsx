@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Search, ArrowLeft, Check, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import plezyyLogo from "@/assets/plezyy-logo.jpeg";
+import Navbar from "@/components/Navbar";
 import serviceCategories from "@/data/serviceCategories";
 
 export default function CreateService() {
@@ -30,19 +30,7 @@ export default function CreateService() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-border glass-effect">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
-          <div className="flex items-center gap-3">
-            <Link to="/">
-              <img alt="Plezyy Logo" className="h-8 w-auto dark:invert" src={plezyyLogo} />
-            </Link>
-          </div>
-          <Button variant="outline" size="sm" className="rounded-lg font-semibold">
-            Save & Exit
-          </Button>
-        </div>
-      </header>
+      <Navbar />
 
       <main className="flex-1 w-full max-w-4xl mx-auto px-4 py-8 sm:py-12">
         {/* Title */}
@@ -126,9 +114,7 @@ export default function CreateService() {
             <Button
               className="rounded-xl font-semibold px-6 gap-2"
               disabled={!selectedId}
-              onClick={() => {
-                // Navigate to service configuration (future route)
-              }}
+              onClick={() => navigate(`/configure-service?templateId=${selectedId}`)}
             >
               <Sparkles className="h-4 w-4" />
               Configure Service

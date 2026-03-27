@@ -11,6 +11,7 @@ import Onboarding from "./pages/Onboarding";
 import OnboardingIdentity from "./pages/OnboardingIdentity";
 import OnboardingPayouts from "./pages/OnboardingPayouts";
 import CreateService from "./pages/CreateService";
+import ConfigureService from "./pages/ConfigureService";
 import Explore from "./pages/Explore";
 import HowItWorks from "./pages/HowItWorks";
 import ServicePost from "./pages/ServicePost";
@@ -21,12 +22,16 @@ import Discovery from "./pages/Discovery";
 import TermsAndPolicies from "./pages/TermsAndPolicies";
 import TrustAndSafety from "./pages/TrustAndSafety";
 import NotFound from "./pages/NotFound";
+import { FavoritesProvider } from "./contexts/FavoritesContext";
+import { ConversationsProvider } from "./contexts/ConversationsContext";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
+      <FavoritesProvider>
+      <ConversationsProvider>
       <Toaster />
       <Sonner />
       <BrowserRouter>
@@ -39,6 +44,7 @@ const App = () => (
           <Route path="/onboarding-identity" element={<OnboardingIdentity />} />
           <Route path="/onboarding-payouts" element={<OnboardingPayouts />} />
           <Route path="/create-service" element={<CreateService />} />
+          <Route path="/configure-service" element={<ConfigureService />} />
           <Route path="/explore" element={<Navigate to="/discovery" replace />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
           <Route path="/service-post" element={<ServicePost />} />
@@ -52,6 +58,8 @@ const App = () => (
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
+    </ConversationsProvider>
+    </FavoritesProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

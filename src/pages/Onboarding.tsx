@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Shield, ArrowLeft, Eye, EyeOff, Globe, Lock, QrCode, Link as LinkIcon } from "lucide-react";
+import { Shield, ArrowLeft, Eye, EyeOff, Globe, Lock, Link as LinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,38 +10,77 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
-import plezyyLogo from "@/assets/plezyy-logo.jpeg";
+import Navbar from "@/components/Navbar";
 import categoriesData from "@/data/categories.json";
 
-// Flatten categories for the picker
+// Sections/groups to exclude from the category picker (not content-descriptive)
+const excludedSections = ["Main", "Countries & Languages"];
+const excludedGroups = ["Private Show", "Broadcast", "Languages"];
+const excludedItems = new Set([
+  "My Favorites", "Recommended", "Watch History", "Gallery", "Best for Privates",
+  "8-12 tk", "16-24 tk", "32-60 tk", "90+ tk", "Video Call (Cam2Cam)",
+  "Recordable Privates", "Spy on Shows", "HD", "Mobile", "Recordable", "VR Cams",
+  "New Models", "Kiiroo", "Lovense", "Interactive Toy",
+]);
+
+// Build grouped categories for display
+const categoryGroups: { heading: string; title: string; items: string[] }[] = [];
 const allCategories: string[] = [];
 categoriesData.forEach((section) => {
+  if (excludedSections.includes(section.heading)) return;
   section.groups.forEach((group) => {
+    if (excludedGroups.includes(group.title)) return;
+    const items: string[] = [];
     group.items.forEach((item) => {
-      if (item.name && !allCategories.includes(item.name)) {
+      if (item.name && !excludedItems.has(item.name) && !allCategories.includes(item.name)) {
+        items.push(item.name);
         allCategories.push(item.name);
       }
     });
+    if (items.length > 0) {
+      categoryGroups.push({
+        heading: section.heading,
+        title: group.title,
+        items,
+      });
+    }
   });
 });
 
-// Curated popular categories for quick selection
-const popularCategories = [
-  "MILF", "Ebony", "Latina", "Asian", "BBW", "Teen 18+", "Mature",
-  "BDSM", "Dominatrix", "Foot Fetish", "Cosplay", "Squirt",
-  "Big Tits", "Big Ass", "Anal", "Blonde", "Brunette", "Redhead",
-  "Athletic", "Curvy", "Skinny", "Mistress", "Role Play", "Striptease",
-];
-
 const genderOptions = ["Female", "Male", "Non-binary", "Trans", "Prefer not to say"];
 const sexualPreferences = ["Straight", "Bisexual", "Lesbian", "Gay", "Pansexual", "Other"];
-const nationalities = [
-  "American", "Argentine", "Australian", "Brazilian", "British", "Canadian",
-  "Chilean", "Chinese", "Colombian", "Dutch", "Ecuadorian", "French",
-  "German", "Indian", "Irish", "Italian", "Japanese", "Kenyan",
-  "Mexican", "Peruvian", "Polish", "Romanian", "South African", "Spanish",
-  "Sri Lankan", "Thai", "Turkish", "Ukrainian", "Uruguayan", "Venezuelan",
-  "Vietnamese", "Other",
+const countries = [
+  "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda",
+  "Argentina", "Armenia", "Australia", "Austria", "Azerbaijan", "Bahamas", "Bahrain",
+  "Bangladesh", "Barbados", "Belarus", "Belgium", "Belize", "Benin", "Bhutan",
+  "Bolivia", "Bosnia and Herzegovina", "Botswana", "Brazil", "Brunei", "Bulgaria",
+  "Burkina Faso", "Burundi", "Cabo Verde", "Cambodia", "Cameroon", "Canada",
+  "Central African Republic", "Chad", "Chile", "China", "Colombia", "Comoros",
+  "Congo", "Costa Rica", "Croatia", "Cuba", "Cyprus", "Czech Republic",
+  "Denmark", "Djibouti", "Dominica", "Dominican Republic", "Ecuador", "Egypt",
+  "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia", "Eswatini", "Ethiopia",
+  "Fiji", "Finland", "France", "Gabon", "Gambia", "Georgia", "Germany", "Ghana",
+  "Greece", "Grenada", "Guatemala", "Guinea", "Guinea-Bissau", "Guyana", "Haiti",
+  "Honduras", "Hungary", "Iceland", "India", "Indonesia", "Iran", "Iraq", "Ireland",
+  "Israel", "Italy", "Jamaica", "Japan", "Jordan", "Kazakhstan", "Kenya", "Kiribati",
+  "Kosovo", "Kuwait", "Kyrgyzstan", "Laos", "Latvia", "Lebanon", "Lesotho", "Liberia",
+  "Libya", "Liechtenstein", "Lithuania", "Luxembourg", "Madagascar", "Malawi",
+  "Malaysia", "Maldives", "Mali", "Malta", "Marshall Islands", "Mauritania",
+  "Mauritius", "Mexico", "Micronesia", "Moldova", "Monaco", "Mongolia", "Montenegro",
+  "Morocco", "Mozambique", "Myanmar", "Namibia", "Nauru", "Nepal", "Netherlands",
+  "New Zealand", "Nicaragua", "Niger", "Nigeria", "North Korea", "North Macedonia",
+  "Norway", "Oman", "Pakistan", "Palau", "Palestine", "Panama", "Papua New Guinea",
+  "Paraguay", "Peru", "Philippines", "Poland", "Portugal", "Qatar", "Romania",
+  "Russia", "Rwanda", "Saint Kitts and Nevis", "Saint Lucia",
+  "Saint Vincent and the Grenadines", "Samoa", "San Marino", "Sao Tome and Principe",
+  "Saudi Arabia", "Senegal", "Serbia", "Seychelles", "Sierra Leone", "Singapore",
+  "Slovakia", "Slovenia", "Solomon Islands", "Somalia", "South Africa", "South Korea",
+  "South Sudan", "Spain", "Sri Lanka", "Sudan", "Suriname", "Sweden", "Switzerland",
+  "Syria", "Taiwan", "Tajikistan", "Tanzania", "Thailand", "Timor-Leste", "Togo",
+  "Tonga", "Trinidad and Tobago", "Tunisia", "Turkey", "Turkmenistan", "Tuvalu",
+  "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom", "United States",
+  "Uruguay", "Uzbekistan", "Vanuatu", "Vatican City", "Venezuela", "Vietnam",
+  "Yemen", "Zambia", "Zimbabwe",
 ];
 
 export default function Onboarding() {
@@ -50,7 +89,11 @@ export default function Onboarding() {
   const [dob, setDob] = useState("");
   const [gender, setGender] = useState("");
   const [nationality, setNationality] = useState("");
-  const [country, setCountry] = useState("");
+  const [location, setLocation] = useState("");
+  const [nationalitySearch, setNationalitySearch] = useState("");
+  const [locationSearch, setLocationSearch] = useState("");
+  const [nationalityOpen, setNationalityOpen] = useState(false);
+  const [locationOpen, setLocationOpen] = useState(false);
   const [sexPref, setSexPref] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [bio, setBio] = useState("");
@@ -112,7 +155,7 @@ export default function Onboarding() {
           date_of_birth: dob,
           gender: genderMap[gender] || null,
           nationality: nationality || null,
-          country_region: country || null,
+          country_region: location || null,
           sexual_preference: sexPrefMap[sexPref] || null,
           categories: selectedCategories,
           bio: bio.trim() || null,
@@ -145,30 +188,14 @@ export default function Onboarding() {
     );
   };
 
-  const filteredCategories = categorySearch
-    ? allCategories.filter((c) => c.toLowerCase().includes(categorySearch.toLowerCase())).slice(0, 40)
-    : popularCategories;
+  const searchLower = categorySearch.toLowerCase();
+  const filteredGroups = categorySearch
+    ? [{ heading: "Search Results", title: "", items: allCategories.filter((c) => c.toLowerCase().includes(searchLower)) }]
+    : categoryGroups;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/10 via-primary/5 to-background flex flex-col">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-border glass-effect">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
-          <div className="flex items-center gap-3">
-            <Link to="/">
-              <img alt="Plezyy Logo" className="h-8 w-auto dark:invert" src={plezyyLogo} />
-            </Link>
-          </div>
-          <div className="flex items-center gap-4">
-            <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:block">
-              Need help?
-            </a>
-            <Button variant="outline" size="sm" className="rounded-lg font-semibold">
-              Save & Exit
-            </Button>
-          </div>
-        </div>
-      </header>
+      <Navbar />
 
       {/* Main Content */}
       <main className="flex-1 w-full max-w-3xl mx-auto px-4 py-8 sm:py-12">
@@ -246,30 +273,56 @@ export default function Onboarding() {
               </div>
             </div>
 
-            {/* Nationality */}
-            <div className="space-y-2">
-              <Label htmlFor="nationality">Nationality</Label>
-              <select
-                id="nationality"
-                value={nationality}
-                onChange={(e) => setNationality(e.target.value)}
-                className="flex h-12 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            {/* Location */}
+            <div className="space-y-2 relative">
+              <Label>Location</Label>
+              <div
+                className="flex h-12 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background cursor-pointer items-center justify-between focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
+                onClick={() => setLocationOpen(!locationOpen)}
               >
-                <option value="">Select nationality</option>
-                {nationalities.map((n) => (
-                  <option key={n} value={n}>{n}</option>
-                ))}
-              </select>
+                <span className={location ? "text-foreground" : "text-muted-foreground"}>
+                  {location || "Where you're based"}
+                </span>
+                <svg className={`h-4 w-4 text-muted-foreground transition-transform ${locationOpen ? "rotate-180" : ""}`} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </div>
+              {locationOpen && (
+                <div className="absolute z-50 mt-1 w-full bg-card border border-border rounded-xl shadow-lg max-h-60 overflow-hidden">
+                  <div className="p-2 border-b border-border">
+                    <Input
+                      placeholder="Search countries..."
+                      value={locationSearch}
+                      onChange={(e) => setLocationSearch(e.target.value)}
+                      className="h-9 rounded-lg"
+                      autoFocus
+                    />
+                  </div>
+                  <div className="overflow-y-auto max-h-48">
+                    {countries
+                      .filter((c) => c.toLowerCase().includes(locationSearch.toLowerCase()))
+                      .map((c) => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => { setLocation(c); setLocationOpen(false); setLocationSearch(""); }}
+                          className={`w-full text-left px-3 py-2 text-sm hover:bg-primary/10 transition-colors ${
+                            location === c ? "bg-primary/5 text-primary font-medium" : "text-foreground"
+                          }`}
+                        >
+                          {c}
+                        </button>
+                      ))}
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Country / Region */}
+            {/* Nationality */}
             <div className="space-y-2">
-              <Label htmlFor="country">Country / Region</Label>
+              <Label>Nationality</Label>
               <Input
-                id="country"
-                value={country}
-                onChange={(e) => setCountry(e.target.value)}
-                placeholder="Where you're based"
+                placeholder="Ex. Canadian"
+                value={nationality}
+                onChange={(e) => setNationality(e.target.value)}
                 className="h-12 rounded-xl"
               />
             </div>
@@ -313,25 +366,34 @@ export default function Onboarding() {
               className="h-10 rounded-xl"
             />
 
-            {/* Category Tags */}
-            <div className="flex flex-wrap gap-2">
-              {filteredCategories.map((cat) => {
-                const isSelected = selectedCategories.includes(cat);
-                return (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() => toggleCategory(cat)}
-                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors border ${
-                      isSelected
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-muted text-muted-foreground border-transparent hover:border-primary/40 hover:text-foreground"
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                );
-              })}
+            {/* Category Groups */}
+            <div className="space-y-5 max-h-[400px] overflow-y-auto pr-1">
+              {filteredGroups.map((group) => (
+                <div key={`${group.heading}-${group.title}`}>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                    {group.title || group.heading}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {group.items.map((cat) => {
+                      const isSelected = selectedCategories.includes(cat);
+                      return (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => toggleCategory(cat)}
+                          className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors border ${
+                            isSelected
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-muted text-muted-foreground border-transparent hover:border-primary/40 hover:text-foreground"
+                          }`}
+                        >
+                          {cat}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
 
             {selectedCategories.length > 0 && (
@@ -442,13 +504,6 @@ export default function Onboarding() {
                 <span className="text-sm font-medium text-foreground">
                   {displayName ? displayName.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") : "your-name"}
                 </span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Button variant="outline" size="sm" className="rounded-lg gap-1.5 text-xs">
-                  <QrCode className="h-3.5 w-3.5" />
-                  Generate QR Code
-                </Button>
-                <p className="text-xs text-muted-foreground">Share on social media, billboards & promotions</p>
               </div>
             </div>
           </section>

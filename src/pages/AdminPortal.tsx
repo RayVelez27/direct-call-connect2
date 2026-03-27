@@ -55,7 +55,7 @@ import {
   Download,
   RefreshCw,
 } from "lucide-react";
-import plezyyLogo from "@/assets/plezyy-logo.jpeg";
+import plezyyLogo from "@/assets/Untitled design - 2026-03-27T091410.050.png";
 
 const adminNav = [
   { label: "Dashboard", icon: LayoutDashboard, id: "dashboard" },

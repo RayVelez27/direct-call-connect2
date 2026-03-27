@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
-import plezyyLogo from "@/assets/plezyy-logo.jpeg";
+import plezyyLogo from "@/assets/Untitled design - 2026-03-27T091410.050.png";
 
 export default function SignInHero() {
   const navigate = useNavigate();

@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -67,7 +68,7 @@ import {
   CircleDot,
   Ban,
 } from "lucide-react";
-import plezyyLogo from "@/assets/plezyy-logo.jpeg";
+import plezyyLogo from "@/assets/Untitled design - 2026-03-27T091410.050.png";
 
 const navItems = [
   { label: "Overview", icon: LayoutDashboard, id: "overview" },
@@ -270,18 +271,6 @@ function OverviewTab({ user }: { user: User }) {
       <div>
         <h2 className="text-2xl font-bold text-foreground">Welcome back</h2>
         <p className="text-muted-foreground mt-1">Here's what's happening with your account today.</p>
-      </div>
-
-      {/* Profile completion */}
-      <div className="rounded-xl border border-border bg-card p-5">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-foreground">Profile Completion</h3>
-          <span className="text-sm font-bold text-primary">25%</span>
-        </div>
-        <Progress value={25} className="h-2" />
-        <p className="text-xs text-muted-foreground mt-2">
-          Complete your profile, verification, and add services to start receiving bookings.
-        </p>
       </div>
 
       {/* Stat cards */}
@@ -754,6 +743,78 @@ function MessagesTab({ user }: { user: User }) {
 
 /* ─── PROFILE TAB ─── */
 function ProfileTab({ user }: { user: User }) {
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [displayName, setDisplayName] = useState("");
+  const [slug, setSlug] = useState("");
+  const [tagline, setTagline] = useState("");
+  const [bio, setBio] = useState("");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [visibility, setVisibility] = useState(false);
+
+  const categoryOptions = ["Video Calls", "Live Shows", "Custom Content", "Girlfriend Experience", "Roleplay", "Fetish", "Sexting", "Date Companion"];
+
+  useEffect(() => {
+    async function fetchProfile() {
+      const { data, error } = await supabase
+        .from("creator_profiles")
+        .select("display_name, slug, tagline, bio, categories, visibility")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Failed to load profile:", error);
+      }
+      if (data) {
+        setDisplayName(data.display_name ?? "");
+        setSlug(data.slug ?? "");
+        setTagline(data.tagline ?? "");
+        setBio(data.bio ?? "");
+        setSelectedCategories(data.categories ?? []);
+        setVisibility(data.visibility === "public");
+      }
+      setLoading(false);
+    }
+    fetchProfile();
+  }, [user.id]);
+
+  const toggleCategory = (cat: string) => {
+    setSelectedCategories((prev) =>
+      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
+    );
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    const { error } = await supabase.from("creator_profiles").upsert(
+      {
+        user_id: user.id,
+        display_name: displayName.trim(),
+        slug: slug.trim(),
+        tagline: tagline.trim() || null,
+        bio: bio.trim() || null,
+        categories: selectedCategories,
+        visibility: visibility ? "public" : "members_only",
+      },
+      { onConflict: "user_id" }
+    );
+    setSaving(false);
+    if (error) {
+      console.error("Profile save error:", error);
+      toast.error("Failed to save profile.");
+    } else {
+      toast.success("Profile saved!");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 max-w-3xl">
       <div>
@@ -768,7 +829,7 @@ function ProfileTab({ user }: { user: User }) {
           <div className="relative">
             <Avatar className="h-20 w-20">
               <AvatarFallback className="bg-primary/10 text-primary text-xl font-bold">
-                {user.email?.slice(0, 2).toUpperCase()}
+                {displayName ? displayName.slice(0, 2).toUpperCase() : user.email?.slice(0, 2).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <button className="absolute -bottom-1 -right-1 p-1.5 rounded-full bg-primary text-primary-foreground shadow">
@@ -800,24 +861,24 @@ function ProfileTab({ user }: { user: User }) {
         <div className="grid sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="displayName">Display Name</Label>
-            <Input id="displayName" placeholder="Your display name" className="h-10 rounded-lg" />
+            <Input id="displayName" placeholder="Your display name" className="h-10 rounded-lg" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="slug">Profile URL</Label>
             <div className="flex items-center">
               <span className="text-sm text-muted-foreground mr-1">plezyy.com/</span>
-              <Input id="slug" placeholder="your-name" className="h-10 rounded-lg flex-1" />
+              <Input id="slug" placeholder="your-name" className="h-10 rounded-lg flex-1" value={slug} onChange={(e) => setSlug(e.target.value)} />
             </div>
           </div>
         </div>
         <div className="space-y-2">
           <Label htmlFor="tagline">Tagline</Label>
-          <Input id="tagline" placeholder="I WILL..." maxLength={80} className="h-10 rounded-lg" />
+          <Input id="tagline" placeholder="I WILL..." maxLength={80} className="h-10 rounded-lg" value={tagline} onChange={(e) => setTagline(e.target.value)} />
           <p className="text-xs text-muted-foreground">Max 80 characters</p>
         </div>
         <div className="space-y-2">
           <Label htmlFor="bio">Bio</Label>
-          <Textarea id="bio" placeholder="Tell members about yourself..." rows={4} maxLength={500} className="rounded-lg resize-none" />
+          <Textarea id="bio" placeholder="Tell members about yourself..." rows={4} maxLength={500} className="rounded-lg resize-none" value={bio} onChange={(e) => setBio(e.target.value)} />
           <p className="text-xs text-muted-foreground">Max 500 characters</p>
         </div>
       </div>
@@ -827,10 +888,15 @@ function ProfileTab({ user }: { user: User }) {
         <h3 className="text-sm font-semibold text-foreground">Categories</h3>
         <p className="text-xs text-muted-foreground">Select at least 3 categories that describe your services.</p>
         <div className="flex flex-wrap gap-2">
-          {["Video Calls", "Live Shows", "Custom Content", "Girlfriend Experience", "Roleplay", "Fetish", "Sexting", "Date Companion"].map((cat) => (
+          {categoryOptions.map((cat) => (
             <button
               key={cat}
-              className="px-3 py-1.5 rounded-full border border-border text-sm text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+              onClick={() => toggleCategory(cat)}
+              className={`px-3 py-1.5 rounded-full border text-sm transition-colors ${
+                selectedCategories.includes(cat)
+                  ? "border-primary bg-primary/10 text-primary font-medium"
+                  : "border-border text-muted-foreground hover:border-primary hover:text-primary"
+              }`}
             >
               {cat}
             </button>
@@ -848,12 +914,14 @@ function ProfileTab({ user }: { user: User }) {
             <h3 className="text-sm font-semibold text-foreground">Profile Visibility</h3>
             <p className="text-xs text-muted-foreground mt-0.5">When public, anyone can find and view your profile.</p>
           </div>
-          <Switch />
+          <Switch checked={visibility} onCheckedChange={setVisibility} />
         </div>
       </div>
 
       <div className="flex justify-end">
-        <Button className="px-8">Save Profile</Button>
+        <Button className="px-8" onClick={handleSave} disabled={saving}>
+          {saving ? "Saving..." : "Save Profile"}
+        </Button>
       </div>
     </div>
   );

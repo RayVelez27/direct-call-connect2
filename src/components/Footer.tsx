@@ -1,6 +1,6 @@
 import { Send } from "lucide-react";
 import { Link } from "react-router-dom";
-import plezyyLogo from "@/assets/Untitled design - 2026-03-15T061848.986.png";
+import plezyyLogo from "@/assets/Untitled design - 2026-03-27T091410.050.png";
 
 const companyLinks = ["About Us", "Careers", "Press", "Contact"];
 const resourceLinks = ["Help Center", "Creator Stories", "Creator Blog", "Pricing"];
