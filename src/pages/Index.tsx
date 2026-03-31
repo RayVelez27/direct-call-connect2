@@ -6,7 +6,6 @@ import ExpertMatching from "@/components/ExpertMatching";
 
 import MakeItHappen from "@/components/MakeItHappen";
 import PlezyyPro from "@/components/PlezyyPro";
-import FaqSection from "@/components/FaqSection";
 import Footer from "@/components/Footer";
 
 const Index = () => {
@@ -21,7 +20,6 @@ const Index = () => {
 
         <MakeItHappen />
         <PlezyyPro />
-        <FaqSection />
       </main>
       <Footer />
     </div>

@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import plezyyLogo from "@/assets/Untitled design - 2026-03-27T091410.050.png";
 
 const companyLinks = ["About Us", "Careers", "Press", "Contact"];
-const resourceLinks = ["Help Center", "Creator Stories", "Creator Blog", "Pricing"];
+const resourceLinks = ["Help Center", "Creator Stories", "Creator Blog", "Pricing", "FAQ"];
 
 export default function Footer() {
   return (
@@ -33,9 +33,15 @@ export default function Footer() {
             <ul className="space-y-4 text-sm text-gray-500 dark:text-gray-400">
               {resourceLinks.map((link) => (
                 <li key={link}>
-                  <a className="hover:text-[#4180FB] dark:hover:text-[#7AAFFD] transition-colors" href="#">
-                    {link}
-                  </a>
+                  {link === "FAQ" ? (
+                    <Link className="hover:text-[#4180FB] dark:hover:text-[#7AAFFD] transition-colors" to="/faq">
+                      {link}
+                    </Link>
+                  ) : (
+                    <a className="hover:text-[#4180FB] dark:hover:text-[#7AAFFD] transition-colors" href="#">
+                      {link}
+                    </a>
+                  )}
                 </li>
               ))}
             </ul>
@@ -61,12 +67,15 @@ export default function Footer() {
             <Link className="text-xs text-gray-500 dark:text-gray-400 hover:text-[#4180FB] dark:hover:text-[#7AAFFD] transition-colors" to="/trust-and-safety">
               Trust &amp; Safety
             </Link>
-            <Link className="text-xs text-gray-500 dark:text-gray-400 hover:text-[#4180FB] dark:hover:text-[#7AAFFD] transition-colors" to="/terms">
-              Terms &amp; Policies
+            <Link className="text-xs text-gray-500 dark:text-gray-400 hover:text-[#4180FB] dark:hover:text-[#7AAFFD] transition-colors" to="/terms-of-use">
+              Terms of Use
             </Link>
-            <a className="text-xs text-gray-500 dark:text-gray-400 hover:text-[#4180FB] dark:hover:text-[#7AAFFD] transition-colors" href="#">
-              Cookies
-            </a>
+            <Link className="text-xs text-gray-500 dark:text-gray-400 hover:text-[#4180FB] dark:hover:text-[#7AAFFD] transition-colors" to="/privacy-policy">
+              Privacy Policy
+            </Link>
+            <Link className="text-xs text-gray-500 dark:text-gray-400 hover:text-[#4180FB] dark:hover:text-[#7AAFFD] transition-colors" to="/terms">
+              Creator Terms
+            </Link>
           </div>
         </div>
       </div>

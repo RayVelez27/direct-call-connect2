@@ -20,7 +20,10 @@ import CreatorDashboard from "./pages/CreatorDashboard";
 import AdminPortal from "./pages/AdminPortal";
 import Discovery from "./pages/Discovery";
 import TermsAndPolicies from "./pages/TermsAndPolicies";
+import TermsOfUse from "./pages/TermsOfUse";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TrustAndSafety from "./pages/TrustAndSafety";
+import Faq from "./pages/Faq";
 import NotFound from "./pages/NotFound";
 import { FavoritesProvider } from "./contexts/FavoritesContext";
 import { ConversationsProvider } from "./contexts/ConversationsContext";
@@ -53,6 +56,9 @@ const App = () => (
           <Route path="/admin" element={<AdminPortal />} />
           <Route path="/discovery" element={<Discovery />} />
           <Route path="/terms" element={<TermsAndPolicies />} />
+          <Route path="/terms-of-use" element={<TermsOfUse />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/faq" element={<Faq />} />
           <Route path="/trust-and-safety" element={<TrustAndSafety />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

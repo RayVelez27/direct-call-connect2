@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useFavorites } from "@/contexts/FavoritesContext";
 import { useConversations } from "@/contexts/ConversationsContext";
 import { Input } from "@/components/ui/input";
@@ -65,6 +65,7 @@ export default function UserDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const { favorites } = useFavorites();
   const { conversations, unreadCount } = useConversations();
 
@@ -74,12 +75,23 @@ export default function UserDashboard() {
   }));
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
+    supabase.auth.getUser().then(async ({ data }) => {
       if (!data.user) {
         navigate("/sign-in");
         return;
       }
       setUser(data.user);
+      const metaAvatar = data.user.user_metadata?.avatar_url;
+      if (metaAvatar) {
+        setAvatarUrl(metaAvatar);
+      } else {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("avatar_url")
+          .eq("id", data.user.id)
+          .single();
+        if (profile?.avatar_url) setAvatarUrl(profile.avatar_url);
+      }
     });
   }, [navigate]);
 
@@ -215,14 +227,37 @@ export default function UserDashboard() {
             </Link>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2 capitalize">
-                  Viewer
-                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                </Button>
+                <button className="relative rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background">
+                  <Avatar className="h-9 w-9 cursor-pointer ring-2 ring-border hover:ring-primary transition-all">
+                    {avatarUrl && <AvatarImage src={avatarUrl} alt="Profile" />}
+                    <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-500 border-2 border-background" />
+                </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem className="font-semibold">Viewer</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/dashboard/creator")}>Creator</DropdownMenuItem>
+              <DropdownMenuContent align="end" className="w-56">
+                <div className="px-3 py-2 border-b border-border">
+                  <p className="text-sm font-medium text-foreground truncate">{user.email}</p>
+                  <p className="text-xs text-muted-foreground">Member</p>
+                </div>
+                <DropdownMenuItem className="font-semibold">
+                  <Eye className="h-4 w-4 mr-2" />
+                  Member Dashboard
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/dashboard/creator")}>
+                  <UserCircle className="h-4 w-4 mr-2" />
+                  Creator Dashboard
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setActiveTab("settings")}>
+                  <Settings className="h-4 w-4 mr-2" />
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign Out
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

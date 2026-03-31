@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -89,14 +89,27 @@ export default function CreatorDashboard() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"creator" | "viewer">("creator");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
+    supabase.auth.getUser().then(async ({ data }) => {
       if (!data.user) {
         navigate("/sign-in");
         return;
       }
       setUser(data.user);
+      // Try to get avatar from user metadata (OAuth) or profiles table
+      const metaAvatar = data.user.user_metadata?.avatar_url;
+      if (metaAvatar) {
+        setAvatarUrl(metaAvatar);
+      } else {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("avatar_url")
+          .eq("id", data.user.id)
+          .single();
+        if (profile?.avatar_url) setAvatarUrl(profile.avatar_url);
+      }
     });
   }, [navigate]);
 
@@ -230,17 +243,36 @@ export default function CreatorDashboard() {
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2 capitalize">
-                  {viewMode}
-                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                </Button>
+                <button className="relative rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background">
+                  <Avatar className="h-9 w-9 cursor-pointer ring-2 ring-border hover:ring-primary transition-all">
+                    {avatarUrl && <AvatarImage src={avatarUrl} alt="Profile" />}
+                    <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-500 border-2 border-background" />
+                </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="w-56">
+                <div className="px-3 py-2 border-b border-border">
+                  <p className="text-sm font-medium text-foreground truncate">{user.email}</p>
+                  <p className="text-xs text-muted-foreground">Creator</p>
+                </div>
                 <DropdownMenuItem onClick={() => setViewMode("creator")} className={viewMode === "creator" ? "font-semibold" : ""}>
-                  Creator
+                  <UserCircle className="h-4 w-4 mr-2" />
+                  Creator Dashboard
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => { setViewMode("viewer"); navigate("/dashboard/user"); }}>
-                  Viewer
+                  <Eye className="h-4 w-4 mr-2" />
+                  Member Dashboard
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setActiveTab("settings")}>
+                  <Settings className="h-4 w-4 mr-2" />
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign Out
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

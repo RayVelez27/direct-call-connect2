@@ -1374,7 +1374,7 @@ export function DiscoveryContent() {
           onClick={() => setShowMobileFilters(!showMobileFilters)}
         >
           <SlidersHorizontal className="h-4 w-4" />
-          {showMobileFilters ? "Hide Panel" : "Show Panel"}
+          Filters
         </Button>
       </div>
 
