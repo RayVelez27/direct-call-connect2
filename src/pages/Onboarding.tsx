@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Shield, ArrowLeft, Eye, EyeOff, Globe, Lock, Link as LinkIcon } from "lucide-react";
+import { Shield, ArrowLeft, Eye, EyeOff, Globe, Lock, Link as LinkIcon, Camera, X, ImagePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,7 +15,7 @@ import categoriesData from "@/data/categories.json";
 
 // Sections/groups to exclude from the category picker (not content-descriptive)
 const excludedSections = ["Main", "Countries & Languages"];
-const excludedGroups = ["Private Show", "Broadcast", "Languages"];
+const excludedGroups = ["Private show", "Broadcast", "Languages"];
 const excludedItems = new Set([
   "My Favorites", "Recommended", "Watch History", "Gallery", "Best for Privates",
   "8-12 tk", "16-24 tk", "32-60 tk", "90+ tk", "Video Call (Cam2Cam)",
@@ -101,6 +101,30 @@ export default function Onboarding() {
   const [visibility, setVisibility] = useState<"public" | "members">("public");
   const [categorySearch, setCategorySearch] = useState("");
   const [saving, setSaving] = useState(false);
+  const [photos, setPhotos] = useState<{ file: File; preview: string }[]>([]);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
+  const MIN_PHOTOS = 3;
+  const MAX_PHOTOS = 10;
+
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const remaining = MAX_PHOTOS - photos.length;
+    const toAdd = files.slice(0, remaining);
+    const newPhotos = toAdd.map((file) => ({
+      file,
+      preview: URL.createObjectURL(file),
+    }));
+    setPhotos((prev) => [...prev, ...newPhotos]);
+    if (photoInputRef.current) photoInputRef.current.value = "";
+  };
+
+  const removePhoto = (index: number) => {
+    setPhotos((prev) => {
+      URL.revokeObjectURL(prev[index].preview);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
 
   // Map frontend labels to DB enum values
   const genderMap: Record<string, string> = {
@@ -136,6 +160,10 @@ export default function Onboarding() {
       toast.error("Please select at least 3 categories.");
       return;
     }
+    if (photos.length < MIN_PHOTOS) {
+      toast.error(`Please upload at least ${MIN_PHOTOS} photos.`);
+      return;
+    }
 
     setSaving(true);
     try {
@@ -147,6 +175,27 @@ export default function Onboarding() {
       }
 
       const slug = generateSlug(displayName) + "-" + user.id.slice(0, 6);
+
+      // Upload photos to Supabase storage
+      const photoUrls: string[] = [];
+      for (let i = 0; i < photos.length; i++) {
+        const photo = photos[i];
+        const ext = photo.file.name.split(".").pop() || "jpg";
+        const path = `${user.id}/${Date.now()}-${i}.${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from("creator-photos")
+          .upload(path, photo.file, { upsert: true });
+        if (uploadError) {
+          console.error("Photo upload error:", uploadError);
+          toast.error(`Failed to upload photo ${i + 1}. Please try again.`);
+          setSaving(false);
+          return;
+        }
+        const { data: urlData } = supabase.storage
+          .from("creator-photos")
+          .getPublicUrl(path);
+        photoUrls.push(urlData.publicUrl);
+      }
 
       const { error } = await supabase.from("creator_profiles").upsert(
         {
@@ -162,6 +211,7 @@ export default function Onboarding() {
           tagline: tagline.trim() || null,
           visibility: visibility === "members" ? "members_only" : "public",
           slug,
+          photos: photoUrls,
         },
         { onConflict: "user_id" }
       );
@@ -216,6 +266,60 @@ export default function Onboarding() {
 
         {/* Form */}
         <div className="max-w-2xl mx-auto space-y-8">
+          {/* Photos Card */}
+          <section className="bg-card border border-border rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
+            <div>
+              <h2 className="text-xl font-bold text-foreground">Profile Photos</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Upload at least {MIN_PHOTOS} photos (max {MAX_PHOTOS}). These will be displayed on your profile.
+              </p>
+            </div>
+
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handlePhotoSelect}
+              className="hidden"
+            />
+
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+              {photos.map((photo, index) => (
+                <div key={index} className="relative aspect-square rounded-xl overflow-hidden border border-border group">
+                  <img
+                    src={photo.preview}
+                    alt={`Photo ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removePhoto(index)}
+                    className="absolute top-1.5 right-1.5 bg-black/60 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+
+              {photos.length < MAX_PHOTOS && (
+                <button
+                  type="button"
+                  onClick={() => photoInputRef.current?.click()}
+                  className="aspect-square rounded-xl border-2 border-dashed border-border hover:border-primary/50 flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-primary transition-colors"
+                >
+                  <ImagePlus className="h-6 w-6" />
+                  <span className="text-xs font-medium">Add Photo</span>
+                </button>
+              )}
+            </div>
+
+            <p className={`text-sm font-medium ${photos.length < MIN_PHOTOS ? "text-destructive" : "text-green-600"}`}>
+              {photos.length} / {MIN_PHOTOS} minimum uploaded
+              {photos.length >= MIN_PHOTOS && " ✓"}
+            </p>
+          </section>
+
           {/* Basic Info Card */}
           <section className="bg-card border border-border rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
             <div>

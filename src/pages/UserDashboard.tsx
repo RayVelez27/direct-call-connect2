@@ -496,15 +496,19 @@ function FavoritesTab() {
 
 /* ─── MESSAGES TAB ─── */
 function MessagesTab({ user }: { user: User }) {
-  const { conversations, addMessage } = useConversations();
-  const [selectedConvoId, setSelectedConvoId] = useState<number | null>(null);
+  const { conversations, sendMessage, markAsRead } = useConversations();
+  const [selectedConvoId, setSelectedConvoId] = useState<string | null>(null);
   const [msgInput, setMsgInput] = useState("");
 
-  const selectedConvo = conversations.find((c) => c.creatorId === selectedConvoId);
+  const selectedConvo = conversations.find((c) => c.partnerId === selectedConvoId);
 
-  const handleSend = () => {
+  useEffect(() => {
+    if (selectedConvoId) markAsRead(selectedConvoId);
+  }, [selectedConvoId, markAsRead]);
+
+  const handleSend = async () => {
     if (!msgInput.trim() || !selectedConvoId) return;
-    addMessage(selectedConvoId, msgInput.trim(), true);
+    await sendMessage(selectedConvoId, msgInput.trim());
     setMsgInput("");
   };
 
@@ -536,30 +540,35 @@ function MessagesTab({ user }: { user: User }) {
               <div className="flex-1 overflow-y-auto">
                 {conversations.map((convo) => (
                   <button
-                    key={convo.creatorId}
-                    onClick={() => setSelectedConvoId(convo.creatorId)}
+                    key={convo.partnerId}
+                    onClick={() => setSelectedConvoId(convo.partnerId)}
                     className={`w-full flex items-center gap-3 p-3 hover:bg-accent/50 transition-colors text-left ${
-                      selectedConvoId === convo.creatorId ? "bg-accent" : ""
+                      selectedConvoId === convo.partnerId ? "bg-accent" : ""
                     }`}
                   >
                     <div className="relative shrink-0">
-                      {convo.creatorImage ? (
-                        <img src={convo.creatorImage} alt={convo.creatorName} className="h-10 w-10 rounded-full object-cover" />
+                      {convo.partnerImage ? (
+                        <img src={convo.partnerImage} alt={convo.partnerName} className="h-10 w-10 rounded-full object-cover" />
                       ) : (
                         <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                          <span className="text-xs font-bold text-primary">{convo.creatorInitials}</span>
+                          <span className="text-xs font-bold text-primary">{convo.partnerInitials}</span>
                         </div>
                       )}
-                      {convo.creatorOnline && (
+                      {convo.partnerOnline && (
                         <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-card" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate">{convo.creatorName}</p>
+                      <p className="text-sm font-semibold text-foreground truncate">{convo.partnerName}</p>
                       <p className="text-xs text-muted-foreground truncate">
                         {convo.messages.length > 0 ? convo.messages[convo.messages.length - 1].content : "No messages yet"}
                       </p>
                     </div>
+                    {convo.unreadCount > 0 && (
+                      <span className="shrink-0 h-5 min-w-[20px] px-1 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-semibold">
+                        {convo.unreadCount}
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>
@@ -571,16 +580,16 @@ function MessagesTab({ user }: { user: User }) {
             <div className="flex-1 flex flex-col">
               {/* Chat header */}
               <div className="flex items-center gap-3 p-4 border-b border-border shrink-0">
-                {selectedConvo.creatorImage ? (
-                  <img src={selectedConvo.creatorImage} alt={selectedConvo.creatorName} className="h-9 w-9 rounded-full object-cover" />
+                {selectedConvo.partnerImage ? (
+                  <img src={selectedConvo.partnerImage} alt={selectedConvo.partnerName} className="h-9 w-9 rounded-full object-cover" />
                 ) : (
                   <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
-                    <span className="text-xs font-bold text-primary">{selectedConvo.creatorInitials}</span>
+                    <span className="text-xs font-bold text-primary">{selectedConvo.partnerInitials}</span>
                   </div>
                 )}
                 <div>
-                  <p className="text-sm font-semibold text-foreground">{selectedConvo.creatorName}</p>
-                  <p className="text-xs text-muted-foreground">{selectedConvo.creatorOnline ? "Online" : "Offline"}</p>
+                  <p className="text-sm font-semibold text-foreground">{selectedConvo.partnerName}</p>
+                  <p className="text-xs text-muted-foreground">{selectedConvo.partnerOnline ? "Online" : "Offline"}</p>
                 </div>
               </div>
               {/* Messages */}
@@ -591,9 +600,9 @@ function MessagesTab({ user }: { user: User }) {
                   </div>
                 ) : (
                   selectedConvo.messages.map((msg) => (
-                    <div key={msg.id} className={`flex ${msg.fromUser ? "justify-end" : "justify-start"}`}>
+                    <div key={msg.id} className={`flex ${msg.fromCurrentUser ? "justify-end" : "justify-start"}`}>
                       <div className={`max-w-[70%] px-3.5 py-2 rounded-2xl text-sm ${
-                        msg.fromUser
+                        msg.fromCurrentUser
                           ? "bg-primary text-primary-foreground rounded-br-md"
                           : "bg-muted text-foreground rounded-bl-md"
                       }`}>

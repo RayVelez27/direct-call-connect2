@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
 import { useFavorites } from "@/contexts/FavoritesContext";
 import { useConversations } from "@/contexts/ConversationsContext";
 import { Button } from "@/components/ui/button";
@@ -70,6 +71,7 @@ interface Review {
 
 interface Creator {
   id: number;
+  userId?: string; // Supabase UUID — needed for real chat
   name: string;
   initials: string;
   tagline: string;
@@ -1333,11 +1335,16 @@ export function DiscoveryContent() {
   }, [addFavorite]);
 
   const handleCreatorChat = useCallback((creator: Creator) => {
+    if (!creator.userId) {
+      // Mock creator without a real DB user — can't chat
+      toast?.("Chat is only available with verified creators.");
+      return;
+    }
     startConversation({
-      id: creator.id,
+      id: creator.userId,
       name: creator.name,
       initials: creator.initials,
-      images: creator.images,
+      image: creator.images?.[0],
       online: creator.online,
     });
     setChatPulse(true);
@@ -1533,39 +1540,53 @@ export function DiscoveryContent() {
             ) : (
               <div className="space-y-2">
                 {conversations.map((convo, idx) => {
-                  // Find full creator data from mock list for chat view
-                  const fullCreator = creators.find((c) => c.id === convo.creatorId);
+                  // Build a minimal Creator object for ChatView from conversation data
+                  const chatCreator: Creator = creators.find((c) => c.userId === convo.partnerId) ?? {
+                    id: 0,
+                    userId: convo.partnerId,
+                    name: convo.partnerName,
+                    initials: convo.partnerInitials,
+                    tagline: "", bio: "", tags: [], age: 0, price: "", per: "",
+                    location: "", badge: "", online: convo.partnerOnline,
+                    successRate: "", earned: "", quote: "", quoteAuthor: "",
+                    images: convo.partnerImage ? [convo.partnerImage] : [],
+                  };
                   return (
                     <div
-                      key={convo.creatorId}
-                      onClick={() => { if (fullCreator) setActiveChatCreator(fullCreator); }}
+                      key={convo.partnerId}
+                      onClick={() => setActiveChatCreator(chatCreator)}
                       className={`flex items-center gap-3 p-2.5 rounded-xl hover:bg-accent/50 transition-all cursor-pointer animate-[favSlideIn_0.4s_ease-out_both] ${
-                        activeChatCreator?.id === convo.creatorId ? "bg-accent ring-1 ring-primary/30" : ""
+                        activeChatCreator?.userId === convo.partnerId ? "bg-accent ring-1 ring-primary/30" : ""
                       }`}
                       style={{ animationDelay: `${idx * 60}ms` }}
                     >
                       <div className="relative shrink-0">
-                        {convo.creatorImage ? (
+                        {convo.partnerImage ? (
                           <img
-                            src={convo.creatorImage}
-                            alt={convo.creatorName}
+                            src={convo.partnerImage}
+                            alt={convo.partnerName}
                             className="h-11 w-11 rounded-full object-cover ring-2 ring-blue-400/50"
                           />
                         ) : (
                           <div className="h-11 w-11 rounded-full bg-primary/20 flex items-center justify-center ring-2 ring-blue-400/50">
-                            <span className="text-xs font-bold text-primary">{convo.creatorInitials}</span>
+                            <span className="text-xs font-bold text-primary">{convo.partnerInitials}</span>
                           </div>
                         )}
-                        {convo.creatorOnline && (
+                        {convo.partnerOnline && (
                           <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-background" />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-foreground truncate">{convo.creatorName}</p>
+                        <p className="text-sm font-semibold text-foreground truncate">{convo.partnerName}</p>
                         <p className="text-xs text-muted-foreground truncate">
                           {convo.messages.length > 0 ? convo.messages[convo.messages.length - 1].content : "Tap to open chat"}
                         </p>
                       </div>
+                      {convo.unreadCount > 0 && (
+                        <span className="shrink-0 h-5 min-w-[20px] px-1 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center font-semibold">
+                          {convo.unreadCount}
+                        </span>
+                      )}
                     </div>
                   );
                 })}
@@ -2820,19 +2841,14 @@ function ServicePostView({
    CHAT VIEW
    ═══════════════════════════════ */
 
-interface ChatMessage {
-  id: number;
-  from: "user" | "creator";
-  text: string;
-  time: string;
-}
-
 function ChatView({ creator, onBack }: { creator: Creator; onBack: () => void }) {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { id: 1, from: "creator", text: `Hey there! I'm ${creator.name.split(" ")[0]}. Thanks for reaching out! 💕`, time: "Just now" },
-  ]);
+  const { getConversation, sendMessage, markAsRead } = useConversations();
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const partnerId = creator.userId ?? "";
+  const conversation = getConversation(partnerId);
+  const messages = conversation?.messages ?? [];
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -2842,36 +2858,24 @@ function ChatView({ creator, onBack }: { creator: Creator; onBack: () => void })
     scrollToBottom();
   }, [messages]);
 
-  const sendMessage = () => {
-    if (!input.trim()) return;
-    const userMsg: ChatMessage = {
-      id: messages.length + 1,
-      from: "user",
-      text: input.trim(),
-      time: "Now",
-    };
-    setMessages((prev) => [...prev, userMsg]);
-    setInput("");
+  useEffect(() => {
+    if (partnerId) markAsRead(partnerId);
+  }, [partnerId, messages.length, markAsRead]);
 
-    // Simulate creator typing & reply
-    setTimeout(() => {
-      const replies = [
-        "That sounds amazing! I'd love to chat more about that 😊",
-        "You're so sweet! Let me know when you want to set up a session 💋",
-        "Haha I love that! You have great taste 😉",
-        "Aww thank you! That really made my day ❤️",
-        "Ooh interesting! Tell me more about yourself 👀",
-        "I'm so glad you reached out! I think we'd have a great time together 🔥",
-        "That's exactly the kind of energy I love! Let's make it happen 💫",
-      ];
-      const reply: ChatMessage = {
-        id: messages.length + 2,
-        from: "creator",
-        text: replies[Math.floor(Math.random() * replies.length)],
-        time: "Now",
-      };
-      setMessages((prev) => [...prev, reply]);
-    }, 1200 + Math.random() * 800);
+  const handleSend = async () => {
+    if (!input.trim() || !partnerId) return;
+    await sendMessage(partnerId, input.trim());
+    setInput("");
+  };
+
+  const formatTime = (iso: string) => {
+    const d = new Date(iso);
+    const now = new Date();
+    const diff = Math.floor((now.getTime() - d.getTime()) / 60000);
+    if (diff < 1) return "Just now";
+    if (diff < 60) return `${diff}m ago`;
+    if (diff < 1440) return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    return d.toLocaleDateString([], { month: "short", day: "numeric" });
   };
 
   return (
@@ -2904,23 +2908,31 @@ function ChatView({ creator, onBack }: { creator: Creator; onBack: () => void })
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`flex ${msg.from === "user" ? "justify-end" : "justify-start"} animate-[favSlideIn_0.3s_ease-out_both]`}
-          >
-            <div
-              className={`max-w-[75%] px-4 py-2.5 rounded-2xl text-sm ${
-                msg.from === "user"
-                  ? "bg-blue-500 text-white rounded-br-md"
-                  : "bg-white text-foreground rounded-bl-md shadow-sm"
-              }`}
-            >
-              <p>{msg.text}</p>
-              <p className={`text-[10px] mt-1 ${msg.from === "user" ? "text-blue-200/60" : "text-muted-foreground/50"}`}>{msg.time}</p>
-            </div>
+        {messages.length === 0 ? (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-sm text-muted-foreground">Send a message to start chatting with {creator.name.split(" ")[0]}</p>
           </div>
-        ))}
+        ) : (
+          messages.map((msg) => (
+            <div
+              key={msg.id}
+              className={`flex ${msg.fromCurrentUser ? "justify-end" : "justify-start"} animate-[favSlideIn_0.3s_ease-out_both]`}
+            >
+              <div
+                className={`max-w-[75%] px-4 py-2.5 rounded-2xl text-sm ${
+                  msg.fromCurrentUser
+                    ? "bg-blue-500 text-white rounded-br-md"
+                    : "bg-white text-foreground rounded-bl-md shadow-sm"
+                }`}
+              >
+                <p>{msg.content}</p>
+                <p className={`text-[10px] mt-1 ${msg.fromCurrentUser ? "text-blue-200/60" : "text-muted-foreground/50"}`}>
+                  {formatTime(msg.timestamp)}
+                </p>
+              </div>
+            </div>
+          ))
+        )}
         <div ref={messagesEndRef} />
       </div>
 
@@ -2931,12 +2943,12 @@ function ChatView({ creator, onBack }: { creator: Creator; onBack: () => void })
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+            onKeyDown={(e) => e.key === "Enter" && handleSend()}
             placeholder={`Message ${creator.name.split(" ")[0]}...`}
             className="flex-1 h-10 px-4 rounded-full bg-[#f0f0f0] text-foreground text-sm placeholder:text-muted-foreground/50 outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
           />
           <button
-            onClick={sendMessage}
+            onClick={handleSend}
             disabled={!input.trim()}
             className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white hover:bg-blue-600 transition-colors disabled:opacity-30 disabled:hover:bg-blue-500 shrink-0"
           >
