@@ -2,8 +2,20 @@ import { Send } from "lucide-react";
 import { Link } from "react-router-dom";
 import plezyyLogo from "@/assets/Untitled design - 2026-03-27T091410.050.png";
 
-const companyLinks = ["About Us", "Careers", "Press", "Contact"];
-const resourceLinks = ["Help Center", "Creator Stories", "Creator Blog", "Pricing", "FAQ"];
+const exploreLinks = [
+  { label: "Discover Creators", to: "/discovery" },
+  { label: "How It Works", to: "/how-it-works" },
+  { label: "FAQ", to: "/faq" },
+];
+
+const legalLinks = [
+  { label: "Trust & Safety", to: "/trust-and-safety" },
+  { label: "Terms of Use", to: "/terms-of-use" },
+  { label: "Privacy Policy", to: "/privacy-policy" },
+  { label: "Creator Terms", to: "/terms" },
+];
+
+const linkClass = "hover:text-[#4180FB] dark:hover:text-[#7AAFFD] transition-colors";
 
 export default function Footer() {
   return (
@@ -17,31 +29,25 @@ export default function Footer() {
             </p>
           </div>
           <div>
-            <h4 className="font-bold text-gray-900 dark:text-white mb-6">Company</h4>
+            <h4 className="font-bold text-gray-900 dark:text-white mb-6">Explore</h4>
             <ul className="space-y-4 text-sm text-gray-500 dark:text-gray-400">
-              {companyLinks.map((link) => (
-                <li key={link}>
-                  <a className="hover:text-[#4180FB] dark:hover:text-[#7AAFFD] transition-colors" href="#">
-                    {link}
-                  </a>
+              {exploreLinks.map((link) => (
+                <li key={link.to}>
+                  <Link className={linkClass} to={link.to}>
+                    {link.label}
+                  </Link>
                 </li>
               ))}
             </ul>
           </div>
           <div>
-            <h4 className="font-bold text-gray-900 dark:text-white mb-6">Resources</h4>
+            <h4 className="font-bold text-gray-900 dark:text-white mb-6">Legal</h4>
             <ul className="space-y-4 text-sm text-gray-500 dark:text-gray-400">
-              {resourceLinks.map((link) => (
-                <li key={link}>
-                  {link === "FAQ" ? (
-                    <Link className="hover:text-[#4180FB] dark:hover:text-[#7AAFFD] transition-colors" to="/faq">
-                      {link}
-                    </Link>
-                  ) : (
-                    <a className="hover:text-[#4180FB] dark:hover:text-[#7AAFFD] transition-colors" href="#">
-                      {link}
-                    </a>
-                  )}
+              {legalLinks.map((link) => (
+                <li key={link.to}>
+                  <Link className={linkClass} to={link.to}>
+                    {link.label}
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -62,20 +68,13 @@ export default function Footer() {
           </div>
         </div>
         <div className="pt-8 border-t border-gray-200 dark:border-gray-800 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-xs text-gray-500 dark:text-gray-400">&copy; 2025 Plezyy Inc. All rights reserved.</p>
-          <div className="flex gap-8">
-            <Link className="text-xs text-gray-500 dark:text-gray-400 hover:text-[#4180FB] dark:hover:text-[#7AAFFD] transition-colors" to="/trust-and-safety">
-              Trust &amp; Safety
-            </Link>
-            <Link className="text-xs text-gray-500 dark:text-gray-400 hover:text-[#4180FB] dark:hover:text-[#7AAFFD] transition-colors" to="/terms-of-use">
-              Terms of Use
-            </Link>
-            <Link className="text-xs text-gray-500 dark:text-gray-400 hover:text-[#4180FB] dark:hover:text-[#7AAFFD] transition-colors" to="/privacy-policy">
-              Privacy Policy
-            </Link>
-            <Link className="text-xs text-gray-500 dark:text-gray-400 hover:text-[#4180FB] dark:hover:text-[#7AAFFD] transition-colors" to="/terms">
-              Creator Terms
-            </Link>
+          <p className="text-xs text-gray-500 dark:text-gray-400">&copy; 2026 Plezyy Inc. All rights reserved.</p>
+          <div className="flex flex-wrap justify-center gap-6 sm:gap-8">
+            {legalLinks.map((link) => (
+              <Link key={link.to} className="text-xs text-gray-500 dark:text-gray-400 hover:text-[#4180FB] dark:hover:text-[#7AAFFD] transition-colors" to={link.to}>
+                {link.label}
+              </Link>
+            ))}
           </div>
         </div>
       </div>

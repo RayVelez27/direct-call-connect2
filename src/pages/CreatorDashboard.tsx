@@ -239,7 +239,7 @@ export default function CreatorDashboard() {
             <h1 className="text-lg font-semibold text-foreground capitalize">{activeTab}</h1>
           </div>
           <div className="flex items-center gap-3">
-            <Button size="sm" className="gap-2">
+            <Button size="sm" className="gap-2" onClick={() => navigate("/create-service")}>
               <Plus className="h-4 w-4" />
               <span className="hidden sm:inline">New Service</span>
             </Button>
