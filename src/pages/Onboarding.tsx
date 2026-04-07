@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Progress } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
@@ -529,16 +530,14 @@ export default function Onboarding() {
 
             {/* Short Bio */}
             <div className="space-y-2">
-              <Label htmlFor="bio">Short Bio</Label>
-              <Textarea
-                id="bio"
+              <Label>Short Bio</Label>
+              <RichTextEditor
                 value={bio}
-                onChange={(e) => setBio(e.target.value)}
+                onChange={setBio}
                 placeholder="Write a few lines about yourself..."
-                className="rounded-xl min-h-[100px] resize-none"
                 maxLength={500}
+                minHeight="100px"
               />
-              <p className="text-xs text-muted-foreground text-right">{bio.length}/500</p>
             </div>
 
             {/* Tagline */}

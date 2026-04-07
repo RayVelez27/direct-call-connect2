@@ -67,8 +67,10 @@ import {
   AlertCircle,
   CircleDot,
   Ban,
+  Heart,
 } from "lucide-react";
 import plezyyLogo from "@/assets/Untitled design - 2026-03-27T091410.050.png";
+import { RichTextEditor, RichTextChat } from "@/components/ui/rich-text-editor";
 
 const navItems = [
   { label: "Overview", icon: LayoutDashboard, id: "overview" },
@@ -297,6 +299,88 @@ export default function CreatorDashboard() {
 }
 
 function OverviewTab({ user }: { user: User }) {
+  const [stats, setStats] = useState({
+    earnings: 0,
+    bookings: 0,
+    profileViews: 0,
+    rating: 0,
+    totalReviews: 0,
+    likes: 0,
+    completedBookings: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      try {
+        // Get creator profile id
+        const { data: cp } = await supabase
+          .from("creator_profiles")
+          .select("id, average_rating, total_reviews, completion_rate")
+          .eq("user_id", user.id)
+          .single();
+
+        if (!cp) { setLoading(false); return; }
+
+        const now = new Date();
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+        // Parallel queries
+        const [earningsRes, bookingsRes, activeBookingsRes, viewsRes, likesRes] = await Promise.all([
+          // Earnings this month
+          supabase
+            .from("transactions")
+            .select("amount")
+            .eq("creator_id", cp.id)
+            .eq("type", "booking_payment")
+            .eq("status", "completed")
+            .gte("created_at", monthStart),
+          // Completed bookings
+          supabase
+            .from("bookings")
+            .select("id", { count: "exact", head: true })
+            .eq("creator_id", cp.id)
+            .eq("status", "completed"),
+          // Active bookings
+          supabase
+            .from("bookings")
+            .select("id", { count: "exact", head: true })
+            .eq("creator_id", cp.id)
+            .in("status", ["pending", "confirmed"]),
+          // Profile views last 7 days
+          supabase
+            .from("profile_views")
+            .select("id", { count: "exact", head: true })
+            .eq("profile_id", cp.id)
+            .gte("viewed_at", weekAgo),
+          // Likes (favorites received)
+          supabase
+            .from("favorites")
+            .select("id", { count: "exact", head: true })
+            .eq("creator_id", cp.id),
+        ]);
+
+        const totalEarnings = (earningsRes.data ?? []).reduce((sum, t) => sum + Number(t.amount), 0);
+
+        setStats({
+          earnings: totalEarnings,
+          bookings: activeBookingsRes.count ?? 0,
+          profileViews: viewsRes.count ?? 0,
+          rating: Number(cp.average_rating) || 0,
+          totalReviews: cp.total_reviews ?? 0,
+          likes: likesRes.count ?? 0,
+          completedBookings: bookingsRes.count ?? 0,
+        });
+      } catch (err) {
+        console.error("Failed to load creator stats:", err);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [user]);
+
   return (
     <div className="space-y-6">
       {/* Welcome */}
@@ -307,10 +391,17 @@ function OverviewTab({ user }: { user: User }) {
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={DollarSign} label="Earnings" value="$0.00" sub="This month" />
-        <StatCard icon={CalendarDays} label="Bookings" value="0" sub="Active" />
-        <StatCard icon={Eye} label="Profile Views" value="0" sub="Last 7 days" />
-        <StatCard icon={Star} label="Rating" value="--" sub="No reviews yet" />
+        <StatCard icon={DollarSign} label="Earnings" value={loading ? "..." : `$${stats.earnings.toFixed(2)}`} sub="This month" />
+        <StatCard icon={CalendarDays} label="Bookings" value={loading ? "..." : String(stats.bookings)} sub="Active" />
+        <StatCard icon={Eye} label="Profile Views" value={loading ? "..." : String(stats.profileViews)} sub="Last 7 days" />
+        <StatCard icon={Star} label="Rating" value={loading ? "..." : stats.totalReviews > 0 ? stats.rating.toFixed(1) : "--"} sub={stats.totalReviews > 0 ? `${stats.totalReviews} review${stats.totalReviews !== 1 ? "s" : ""}` : "No reviews yet"} />
+      </div>
+
+      {/* Additional analytics */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        <StatCard icon={Heart} label="Likes" value={loading ? "..." : String(stats.likes)} sub="Total favorites" />
+        <StatCard icon={CheckCircle2} label="Completed" value={loading ? "..." : String(stats.completedBookings)} sub="All-time bookings" />
+        <StatCard icon={TrendingUp} label="Completion Rate" value={loading ? "..." : `${stats.completedBookings > 0 ? Math.round((stats.completedBookings / (stats.completedBookings + stats.bookings)) * 100) : 0}%`} sub="Booking success" />
       </div>
 
       {/* Quick actions */}
@@ -752,20 +843,10 @@ function MessagesTab({ user }: { user: User }) {
 
           {/* Message input - always visible */}
           <div className="border-t border-border p-3">
-            <div className="flex items-center gap-2">
-              <button className="p-2 rounded-lg hover:bg-accent text-muted-foreground">
-                <Paperclip className="h-5 w-5" />
-              </button>
-              <Input
-                placeholder="Type a message..."
-                className="flex-1 h-10 rounded-lg"
-                value={messageText}
-                onChange={(e) => setMessageText(e.target.value)}
-              />
-              <Button size="icon" className="h-10 w-10 shrink-0" disabled={!messageText.trim()}>
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
+            <RichTextChat
+              onSend={(html) => setMessageText(html)}
+              placeholder="Type a message..."
+            />
           </div>
         </div>
       </div>
@@ -909,9 +990,14 @@ function ProfileTab({ user }: { user: User }) {
           <p className="text-xs text-muted-foreground">Max 80 characters</p>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="bio">Bio</Label>
-          <Textarea id="bio" placeholder="Tell members about yourself..." rows={4} maxLength={500} className="rounded-lg resize-none" value={bio} onChange={(e) => setBio(e.target.value)} />
-          <p className="text-xs text-muted-foreground">Max 500 characters</p>
+          <Label>Bio</Label>
+          <RichTextEditor
+            value={bio}
+            onChange={setBio}
+            placeholder="Tell members about yourself..."
+            maxLength={500}
+            minHeight="100px"
+          />
         </div>
       </div>
 

@@ -7,6 +7,7 @@ import { useConversations } from "@/contexts/ConversationsContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { RichTextChat } from "@/components/ui/rich-text-editor";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
@@ -2925,7 +2926,7 @@ function ChatView({ creator, onBack }: { creator: Creator; onBack: () => void })
                     : "bg-white text-foreground rounded-bl-md shadow-sm"
                 }`}
               >
-                <p>{msg.content}</p>
+                <div className="prose prose-sm dark:prose-invert [&_p]:my-0 [&_p:last-child]:mb-0" dangerouslySetInnerHTML={{ __html: msg.content }} />
                 <p className={`text-[10px] mt-1 ${msg.fromCurrentUser ? "text-blue-200/60" : "text-muted-foreground/50"}`}>
                   {formatTime(msg.timestamp)}
                 </p>
@@ -2938,23 +2939,13 @@ function ChatView({ creator, onBack }: { creator: Creator; onBack: () => void })
 
       {/* Input */}
       <div className="shrink-0 px-4 py-3 border-t border-black/10 bg-white rounded-b-2xl">
-        <div className="flex items-center gap-2">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            placeholder={`Message ${creator.name.split(" ")[0]}...`}
-            className="flex-1 h-10 px-4 rounded-full bg-[#f0f0f0] text-foreground text-sm placeholder:text-muted-foreground/50 outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
-          />
-          <button
-            onClick={handleSend}
-            disabled={!input.trim()}
-            className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white hover:bg-blue-600 transition-colors disabled:opacity-30 disabled:hover:bg-blue-500 shrink-0"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
-        </div>
+        <RichTextChat
+          onSend={async (html) => {
+            if (!partnerId) return;
+            await sendMessage(partnerId, html);
+          }}
+          placeholder={`Message ${creator.name.split(" ")[0]}...`}
+        />
       </div>
     </div>
   );

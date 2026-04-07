@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2, Landmark } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Landmark, ChevronDown, Infinity, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +9,17 @@ import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
 import serviceCategories from "@/data/serviceCategories";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+
+const durationPresets = [
+  { value: "15 min", label: "15 minutes" },
+  { value: "30 min", label: "30 minutes" },
+  { value: "45 min", label: "45 minutes" },
+  { value: "1 hour", label: "1 hour" },
+  { value: "1.5 hours", label: "1.5 hours" },
+  { value: "2 hours", label: "2 hours" },
+  { value: "3 hours", label: "3 hours" },
+];
 
 const deliveryMethods = [
   { value: "video_call", label: "Video Call" },
@@ -47,7 +58,10 @@ export default function ConfigureService() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [deliveryMethod, setDeliveryMethod] = useState("");
+  const [durationMode, setDurationMode] = useState<"preset" | "custom" | "unlimited">("preset");
   const [duration, setDuration] = useState("");
+  const [customDurationValue, setCustomDurationValue] = useState("");
+  const [customDurationUnit, setCustomDurationUnit] = useState("min");
   const [tiers, setTiers] = useState<ServiceTier[]>([emptyTier(0)]);
   const [saving, setSaving] = useState(false);
 
@@ -178,18 +192,14 @@ export default function ConfigureService() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description">Description *</Label>
-                <Textarea
-                  id="description"
+                <Label>Description *</Label>
+                <RichTextEditor
                   value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                  onChange={setDescription}
                   placeholder="Describe what clients get with this service..."
-                  className="rounded-xl min-h-[120px] resize-none"
                   maxLength={1000}
+                  minHeight="120px"
                 />
-                <p className="text-xs text-muted-foreground text-right">
-                  {description.length}/1000
-                </p>
               </div>
 
               <div className="space-y-2">
@@ -212,15 +222,95 @@ export default function ConfigureService() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="duration">Duration</Label>
-                <Input
-                  id="duration"
-                  value={duration}
-                  onChange={(e) => setDuration(e.target.value)}
-                  placeholder="e.g. 30 min, 1 hour"
-                  className="h-12 rounded-xl"
-                />
+              <div className="space-y-3">
+                <Label>Duration</Label>
+                {/* Mode selector */}
+                <div className="grid grid-cols-3 gap-2">
+                  {([
+                    { mode: "preset" as const, label: "Preset", icon: Clock },
+                    { mode: "custom" as const, label: "Custom", icon: Clock },
+                    { mode: "unlimited" as const, label: "Unlimited", icon: Infinity },
+                  ]).map(({ mode, label, icon: Icon }) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => {
+                        setDurationMode(mode);
+                        if (mode === "unlimited") setDuration("Unlimited");
+                        else if (mode === "preset") setDuration("");
+                        else setDuration("");
+                      }}
+                      className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors border ${
+                        durationMode === mode
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-card text-foreground border-border hover:border-primary/50"
+                      }`}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Preset dropdown */}
+                {durationMode === "preset" && (
+                  <div className="relative">
+                    <select
+                      value={duration}
+                      onChange={(e) => setDuration(e.target.value)}
+                      className="w-full h-12 rounded-xl border border-border bg-card text-foreground px-4 pr-10 text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+                    >
+                      <option value="">Select duration...</option>
+                      {durationPresets.map((p) => (
+                        <option key={p.value} value={p.value}>
+                          {p.label}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  </div>
+                )}
+
+                {/* Custom time input */}
+                {durationMode === "custom" && (
+                  <div className="flex gap-2">
+                    <Input
+                      type="number"
+                      min="1"
+                      value={customDurationValue}
+                      onChange={(e) => {
+                        setCustomDurationValue(e.target.value);
+                        if (e.target.value) setDuration(`${e.target.value} ${customDurationUnit}`);
+                        else setDuration("");
+                      }}
+                      placeholder="Enter amount"
+                      className="h-12 rounded-xl flex-1"
+                    />
+                    <div className="relative">
+                      <select
+                        value={customDurationUnit}
+                        onChange={(e) => {
+                          setCustomDurationUnit(e.target.value);
+                          if (customDurationValue) setDuration(`${customDurationValue} ${e.target.value}`);
+                        }}
+                        className="h-12 rounded-xl border border-border bg-card text-foreground px-4 pr-9 text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+                      >
+                        <option value="min">Minutes</option>
+                        <option value="hours">Hours</option>
+                        <option value="days">Days</option>
+                      </select>
+                      <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                    </div>
+                  </div>
+                )}
+
+                {/* Unlimited indicator */}
+                {durationMode === "unlimited" && (
+                  <div className="flex items-center gap-2 h-12 px-4 rounded-xl border border-border bg-muted/50 text-sm text-muted-foreground">
+                    <Infinity className="h-4 w-4" />
+                    No time limit — session runs until complete
+                  </div>
+                )}
               </div>
             </div>
           </section>
@@ -301,14 +391,12 @@ export default function ConfigureService() {
 
                   <div className="space-y-2">
                     <Label>What's Included</Label>
-                    <Textarea
+                    <RichTextEditor
                       value={tier.description}
-                      onChange={(e) =>
-                        updateTier(index, "description", e.target.value)
-                      }
+                      onChange={(val) => updateTier(index, "description", val)}
                       placeholder="Describe what this tier includes..."
-                      className="rounded-xl min-h-[80px] resize-none"
                       maxLength={500}
+                      minHeight="80px"
                     />
                   </div>
 

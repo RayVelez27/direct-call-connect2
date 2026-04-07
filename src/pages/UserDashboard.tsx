@@ -48,6 +48,7 @@ import {
   Calendar,
 } from "lucide-react";
 import plezyyLogo from "@/assets/Untitled design - 2026-03-27T091410.050.png";
+import { RichTextChat } from "@/components/ui/rich-text-editor";
 
 const navItemsDef = [
   { label: "Overview", icon: LayoutDashboard, id: "overview" },
@@ -282,6 +283,64 @@ export default function UserDashboard() {
 function OverviewTab({ user }: { user: User }) {
   const { favorites } = useFavorites();
   const { conversations, unreadCount } = useConversations();
+  const [stats, setStats] = useState({
+    upcomingBookings: 0,
+    completedBookings: 0,
+    totalSpent: 0,
+    totalBookings: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      try {
+        const now = new Date();
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+        const [upcomingRes, completedRes, spentRes, totalRes] = await Promise.all([
+          // Upcoming bookings
+          supabase
+            .from("bookings")
+            .select("id", { count: "exact", head: true })
+            .eq("consumer_id", user.id)
+            .in("status", ["pending", "confirmed"]),
+          // Completed bookings
+          supabase
+            .from("bookings")
+            .select("id", { count: "exact", head: true })
+            .eq("consumer_id", user.id)
+            .eq("status", "completed"),
+          // Spent this month
+          supabase
+            .from("transactions")
+            .select("amount")
+            .eq("consumer_id", user.id)
+            .eq("type", "booking_payment")
+            .eq("status", "completed")
+            .gte("created_at", monthStart),
+          // Total bookings all time
+          supabase
+            .from("bookings")
+            .select("id", { count: "exact", head: true })
+            .eq("consumer_id", user.id),
+        ]);
+
+        const totalSpent = (spentRes.data ?? []).reduce((sum, t) => sum + Number(t.amount), 0);
+
+        setStats({
+          upcomingBookings: upcomingRes.count ?? 0,
+          completedBookings: completedRes.count ?? 0,
+          totalSpent,
+          totalBookings: totalRes.count ?? 0,
+        });
+      } catch (err) {
+        console.error("Failed to load member stats:", err);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [user]);
 
   return (
     <div className="space-y-6">
@@ -292,10 +351,17 @@ function OverviewTab({ user }: { user: User }) {
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={CalendarDays} label="Bookings" value="0" sub="Upcoming" />
+        <StatCard icon={CalendarDays} label="Bookings" value={loading ? "..." : String(stats.upcomingBookings)} sub="Upcoming" />
         <StatCard icon={Heart} label="Favorites" value={String(favorites.length)} sub="Saved creators" />
         <StatCard icon={MessageSquare} label="Messages" value={String(unreadCount)} sub={`${conversations.length} conversation${conversations.length !== 1 ? "s" : ""}`} />
-        <StatCard icon={Receipt} label="Spent" value="$0.00" sub="This month" />
+        <StatCard icon={Receipt} label="Spent" value={loading ? "..." : `$${stats.totalSpent.toFixed(2)}`} sub="This month" />
+      </div>
+
+      {/* Additional analytics */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        <StatCard icon={Star} label="Completed" value={loading ? "..." : String(stats.completedBookings)} sub="Sessions done" />
+        <StatCard icon={Eye} label="Total Bookings" value={loading ? "..." : String(stats.totalBookings)} sub="All time" />
+        <StatCard icon={Clock} label="Conversations" value={String(conversations.length)} sub="With creators" />
       </div>
 
       {/* Quick actions */}
@@ -601,31 +667,27 @@ function MessagesTab({ user }: { user: User }) {
                 ) : (
                   selectedConvo.messages.map((msg) => (
                     <div key={msg.id} className={`flex ${msg.fromCurrentUser ? "justify-end" : "justify-start"}`}>
-                      <div className={`max-w-[70%] px-3.5 py-2 rounded-2xl text-sm ${
-                        msg.fromCurrentUser
-                          ? "bg-primary text-primary-foreground rounded-br-md"
-                          : "bg-muted text-foreground rounded-bl-md"
-                      }`}>
-                        {msg.content}
-                      </div>
+                      <div
+                        className={`max-w-[70%] px-3.5 py-2 rounded-2xl text-sm prose prose-sm dark:prose-invert [&_p]:my-0 [&_p:last-child]:mb-0 ${
+                          msg.fromCurrentUser
+                            ? "bg-primary text-primary-foreground rounded-br-md [&_strong]:text-primary-foreground [&_em]:text-primary-foreground"
+                            : "bg-muted text-foreground rounded-bl-md"
+                        }`}
+                        dangerouslySetInnerHTML={{ __html: msg.content }}
+                      />
                     </div>
                   ))
                 )}
               </div>
               {/* Input */}
               <div className="p-3 border-t border-border shrink-0">
-                <div className="flex items-center gap-2">
-                  <Input
-                    placeholder="Type a message..."
-                    className="h-10 rounded-lg flex-1"
-                    value={msgInput}
-                    onChange={(e) => setMsgInput(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") handleSend(); }}
-                  />
-                  <Button size="sm" onClick={handleSend} disabled={!msgInput.trim()}>
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </div>
+                <RichTextChat
+                  onSend={async (html) => {
+                    if (!selectedConvoId) return;
+                    await sendMessage(selectedConvoId, html);
+                  }}
+                  placeholder="Type a message..."
+                />
               </div>
             </div>
           ) : (
