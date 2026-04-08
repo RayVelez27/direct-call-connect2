@@ -6,6 +6,7 @@ const exploreLinks = [
   { label: "Discover Creators", to: "/discovery" },
   { label: "How It Works", to: "/how-it-works" },
   { label: "FAQ", to: "/faq" },
+  { label: "Contact", to: "/support" },
 ];
 
 const legalLinks = [

@@ -71,6 +71,7 @@ import {
 } from "lucide-react";
 import plezyyLogo from "@/assets/Untitled design - 2026-03-27T091410.050.png";
 import { RichTextEditor, RichTextChat } from "@/components/ui/rich-text-editor";
+import { applyWatermark } from "@/lib/watermark";
 
 const navItems = [
   { label: "Overview", icon: LayoutDashboard, id: "overview" },
@@ -614,15 +615,20 @@ function ContentTab() {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  const handleFiles = (incoming: FileList | null) => {
+  const handleFiles = async (incoming: FileList | null) => {
     if (!incoming) return;
-    const newFiles = Array.from(incoming).map((f) => ({
-      name: f.name,
-      type: f.type.startsWith("video") ? "video" : f.type === "image/gif" ? "gif" : "image",
-      size: formatSize(f.size),
-      preview: URL.createObjectURL(f),
-    }));
-    setFiles((prev) => [...prev, ...newFiles]);
+    const processed = await Promise.all(
+      Array.from(incoming).map(async (f) => {
+        const watermarked = await applyWatermark(f);
+        return {
+          name: f.name,
+          type: f.type.startsWith("video") ? "video" : f.type === "image/gif" ? "gif" : "image",
+          size: formatSize(watermarked.size),
+          preview: URL.createObjectURL(watermarked),
+        };
+      })
+    );
+    setFiles((prev) => [...prev, ...processed]);
   };
 
   const removeFile = (index: number) => {

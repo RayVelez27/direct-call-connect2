@@ -13,6 +13,7 @@ import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
 import categoriesData from "@/data/categories.json";
+import { applyWatermark } from "@/lib/watermark";
 
 // Sections/groups to exclude from the category picker (not content-descriptive)
 const excludedSections = ["Main", "Countries & Languages"];
@@ -177,15 +178,16 @@ export default function Onboarding() {
 
       const slug = generateSlug(displayName) + "-" + user.id.slice(0, 6);
 
-      // Upload photos to Supabase storage
+      // Upload photos to Supabase storage (with watermark)
       const photoUrls: string[] = [];
       for (let i = 0; i < photos.length; i++) {
         const photo = photos[i];
+        const watermarked = await applyWatermark(photo.file);
         const ext = photo.file.name.split(".").pop() || "jpg";
         const path = `${user.id}/${Date.now()}-${i}.${ext}`;
         const { error: uploadError } = await supabase.storage
           .from("creator-photos")
-          .upload(path, photo.file, { upsert: true });
+          .upload(path, watermarked, { upsert: true });
         if (uploadError) {
           console.error("Photo upload error:", uploadError);
           toast.error(`Failed to upload photo ${i + 1}. Please try again.`);
