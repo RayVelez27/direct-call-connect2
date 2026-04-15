@@ -45,10 +45,10 @@ export default function SignIn() {
         <div />
         <div>
           <h1 className="text-4xl font-bold leading-tight mb-4">
-            Connect with expertise, instantly.
+            Welcome back to Plezyy.
           </h1>
           <p className="text-primary-foreground/70 text-lg leading-relaxed">
-            Join thousands of people who get professional advice through direct, paid phone calls on Plezyy.
+            Sign in to book private calls, message your favorite creators, and pick up right where you left off.
           </p>
         </div>
         <p className="text-sm text-primary-foreground/60">© 2026 Plezyy Inc.</p>
