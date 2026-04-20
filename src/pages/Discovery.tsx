@@ -90,6 +90,7 @@ interface Creator {
   quoteAuthor: string;
   reviews?: Review[];
   images?: string[];
+  createdAt?: string;
 }
 
 const creators: Creator[] = [
@@ -1257,8 +1258,49 @@ const badgeConfig: Record<string, { label: string; color: string; icon: any }> =
 const serviceOfferings = ["Chat", "NSFW content", "Voice", "Video", "Custom content"];
 
 const locationOptions = [
-  "Any Location", "France", "United States", "United Kingdom", "Canada",
-  "Germany", "Colombia", "Australia", "Spain", "Italy",
+  "Any Location",
+  "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda",
+  "Argentina", "Armenia", "Australia", "Austria", "Azerbaijan",
+  "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belgium",
+  "Belize", "Benin", "Bhutan", "Bolivia", "Bosnia and Herzegovina", "Botswana",
+  "Brazil", "Brunei", "Bulgaria", "Burkina Faso", "Burundi",
+  "Cabo Verde", "Cambodia", "Cameroon", "Canada", "Central African Republic",
+  "Chad", "Chile", "China", "Colombia", "Comoros", "Congo", "Costa Rica",
+  "Croatia", "Cuba", "Cyprus", "Czech Republic",
+  "Denmark", "Djibouti", "Dominica", "Dominican Republic",
+  "Ecuador", "Egypt", "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia",
+  "Eswatini", "Ethiopia",
+  "Fiji", "Finland", "France",
+  "Gabon", "Gambia", "Georgia", "Germany", "Ghana", "Greece", "Grenada",
+  "Guatemala", "Guinea", "Guinea-Bissau", "Guyana",
+  "Haiti", "Honduras", "Hungary",
+  "Iceland", "India", "Indonesia", "Iran", "Iraq", "Ireland", "Israel", "Italy",
+  "Jamaica", "Japan", "Jordan",
+  "Kazakhstan", "Kenya", "Kiribati", "Kosovo", "Kuwait", "Kyrgyzstan",
+  "Laos", "Latvia", "Lebanon", "Lesotho", "Liberia", "Libya", "Liechtenstein",
+  "Lithuania", "Luxembourg",
+  "Madagascar", "Malawi", "Malaysia", "Maldives", "Mali", "Malta",
+  "Marshall Islands", "Mauritania", "Mauritius", "Mexico", "Micronesia",
+  "Moldova", "Monaco", "Mongolia", "Montenegro", "Morocco", "Mozambique", "Myanmar",
+  "Namibia", "Nauru", "Nepal", "Netherlands", "New Zealand", "Nicaragua",
+  "Niger", "Nigeria", "North Korea", "North Macedonia", "Norway",
+  "Oman",
+  "Pakistan", "Palau", "Palestine", "Panama", "Papua New Guinea", "Paraguay",
+  "Peru", "Philippines", "Poland", "Portugal",
+  "Qatar",
+  "Romania", "Russia", "Rwanda",
+  "Saint Kitts and Nevis", "Saint Lucia", "Saint Vincent and the Grenadines",
+  "Samoa", "San Marino", "Sao Tome and Principe", "Saudi Arabia", "Senegal",
+  "Serbia", "Seychelles", "Sierra Leone", "Singapore", "Slovakia", "Slovenia",
+  "Solomon Islands", "Somalia", "South Africa", "South Korea", "South Sudan",
+  "Spain", "Sri Lanka", "Sudan", "Suriname", "Sweden", "Switzerland", "Syria",
+  "Taiwan", "Tajikistan", "Tanzania", "Thailand", "Timor-Leste", "Togo",
+  "Tonga", "Trinidad and Tobago", "Tunisia", "Turkey", "Turkmenistan", "Tuvalu",
+  "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom", "United States",
+  "Uruguay", "Uzbekistan",
+  "Vanuatu", "Vatican City", "Venezuela", "Vietnam",
+  "Yemen",
+  "Zambia", "Zimbabwe",
 ];
 
 const ageRangeOptions = ["18-25", "26-35", "36-45", "46+"];
@@ -2377,6 +2419,15 @@ function ProfileView({
     </div>
   ) : null;
 
+  // Generate a profile creation date from createdAt or based on creator id
+  const profileDate = creator.createdAt
+    ? new Date(creator.createdAt)
+    : new Date(2026, 0 + ((creator.id * 3) % 4), 1 + ((creator.id * 7) % 28));
+  const formattedDate = profileDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  const day = profileDate.getDate();
+  const ordinal = day === 1 || day === 21 || day === 31 ? "st" : day === 2 || day === 22 ? "nd" : day === 3 || day === 23 ? "rd" : "th";
+  const createdDateDisplay = `Created on ${profileDate.toLocaleDateString("en-US", { month: "long" })} ${day}${ordinal}, ${profileDate.getFullYear()}`;
+
   const identityBlock = (
     <div className="space-y-4">
       <div>
@@ -2396,6 +2447,7 @@ function ProfileView({
           <TrendingUp className="h-3 w-3 text-muted-foreground" />
           <span className="text-xs text-muted-foreground">{creator.earned}</span>
         </div>
+        <p className="text-xs text-muted-foreground mt-2 italic">{createdDateDisplay}</p>
       </div>
       <div className="flex flex-wrap gap-1.5">
         {creator.tags.map((tag) => (

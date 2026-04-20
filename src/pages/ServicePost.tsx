@@ -513,10 +513,12 @@ export default function ServicePost() {
                   </div>
 
                   <div className="space-y-3">
-                    <Button className="w-full h-12 font-bold text-base shadow-lg shadow-primary/20 gap-2">
-                      <Video className="h-4 w-4" />
-                      Book Session — {tier.price}
-                    </Button>
+                    <Link to="/schedule?creator=demo">
+                      <Button className="w-full h-12 font-bold text-base shadow-lg shadow-primary/20 gap-2">
+                        <Video className="h-4 w-4" />
+                        Book Session — {tier.price}
+                      </Button>
+                    </Link>
                     <Button
                       variant="outline"
                       className="w-full h-12 font-bold border-primary/30 text-primary hover:bg-primary/5 gap-2"

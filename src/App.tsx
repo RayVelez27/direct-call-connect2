@@ -27,6 +27,7 @@ import TrustAndSafety from "./pages/TrustAndSafety";
 import Faq from "./pages/Faq";
 import Support from "./pages/Support";
 import NotFound from "./pages/NotFound";
+import Schedule from "./pages/Schedule";
 import { FavoritesProvider } from "./contexts/FavoritesContext";
 import { ConversationsProvider } from "./contexts/ConversationsContext";
 
@@ -71,6 +72,7 @@ const App = () => (
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/faq" element={<Faq />} />
           <Route path="/trust-and-safety" element={<TrustAndSafety />} />
+          <Route path="/schedule" element={<Schedule />} />
           <Route path="/support" element={<Support />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

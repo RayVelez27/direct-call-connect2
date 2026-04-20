@@ -72,11 +72,13 @@ import {
 import plezyyLogo from "@/assets/Untitled design - 2026-03-27T091410.050.png";
 import { RichTextEditor, RichTextChat } from "@/components/ui/rich-text-editor";
 import { applyWatermark } from "@/lib/watermark";
+import CreatorScheduleTab from "@/components/CreatorScheduleTab";
 
 const navItems = [
   { label: "Overview", icon: LayoutDashboard, id: "overview" },
   { label: "Services", icon: Briefcase, id: "services" },
   { label: "Bookings", icon: CalendarDays, id: "bookings" },
+  { label: "Schedule", icon: Clock, id: "schedule" },
   { label: "Content", icon: Upload, id: "content" },
   { label: "Earnings", icon: DollarSign, id: "earnings" },
   { label: "Messages", icon: MessageSquare, id: "messages", badge: 3 },
@@ -287,6 +289,7 @@ export default function CreatorDashboard() {
           {activeTab === "overview" && <OverviewTab user={user} />}
           {activeTab === "services" && <ServicesTab />}
           {activeTab === "bookings" && <BookingsTab />}
+          {activeTab === "schedule" && <CreatorScheduleTab user={user} />}
           {activeTab === "content" && <ContentTab />}
           {activeTab === "earnings" && <EarningsTab />}
           {activeTab === "messages" && <MessagesTab user={user} />}
