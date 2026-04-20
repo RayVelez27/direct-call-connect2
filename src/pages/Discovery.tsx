@@ -1478,6 +1478,50 @@ export function DiscoveryContent() {
           {/* Filter Tab */}
           {sidebarTab === "filter" && (
             <div className="space-y-7">
+              <FilterSection title="Categories">
+                <Accordion type="multiple" className="w-full">
+                  {categorySections.map((section) => (
+                    <AccordionItem key={section.heading} value={section.heading} className="border-border/50">
+                      <AccordionTrigger className="py-2.5 text-sm font-semibold hover:no-underline">
+                        {section.heading}
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-4">
+                          {section.groups.map((group, gi) => (
+                            <div key={gi}>
+                              {group.title && (
+                                <p className="text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider mb-2">
+                                  {group.title}
+                                </p>
+                              )}
+                              <div className="space-y-2">
+                                {group.items.map((item) => (
+                                  <label key={item.name} className="flex items-center gap-2.5 cursor-pointer group">
+                                    <Checkbox
+                                      className="border-border"
+                                      checked={selectedCategories.has(item.name)}
+                                      onCheckedChange={() => toggleCategory(item.name)}
+                                    />
+                                    <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors flex-1">
+                                      {item.name}
+                                    </span>
+                                    {item.count !== undefined && (
+                                      <span className="text-xs text-muted-foreground/50">
+                                        {item.count.toLocaleString()}
+                                      </span>
+                                    )}
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              </FilterSection>
+
               <FilterSection title="Location">
                 <Select value={selectedLocation} onValueChange={setSelectedLocation}>
                   <SelectTrigger className="h-10 rounded-lg text-sm"><SelectValue /></SelectTrigger>
@@ -1524,50 +1568,6 @@ export function DiscoveryContent() {
                     ))}
                   </SelectContent>
                 </Select>
-              </FilterSection>
-
-              <FilterSection title="Categories">
-                <Accordion type="multiple" className="w-full">
-                  {categorySections.map((section) => (
-                    <AccordionItem key={section.heading} value={section.heading} className="border-border/50">
-                      <AccordionTrigger className="py-2.5 text-sm font-semibold hover:no-underline">
-                        {section.heading}
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <div className="space-y-4">
-                          {section.groups.map((group, gi) => (
-                            <div key={gi}>
-                              {group.title && (
-                                <p className="text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider mb-2">
-                                  {group.title}
-                                </p>
-                              )}
-                              <div className="space-y-2">
-                                {group.items.map((item) => (
-                                  <label key={item.name} className="flex items-center gap-2.5 cursor-pointer group">
-                                    <Checkbox
-                                      className="border-border"
-                                      checked={selectedCategories.has(item.name)}
-                                      onCheckedChange={() => toggleCategory(item.name)}
-                                    />
-                                    <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors flex-1">
-                                      {item.name}
-                                    </span>
-                                    {item.count !== undefined && (
-                                      <span className="text-xs text-muted-foreground/50">
-                                        {item.count.toLocaleString()}
-                                      </span>
-                                    )}
-                                  </label>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
               </FilterSection>
             </div>
           )}
@@ -2052,6 +2052,7 @@ function SwipeCard({
     if (!dragStart.current) return;
     e.preventDefault();
     const x = e.clientX - dragStart.current.x;
+    const y = e.clientY - dragStart.current.y;
     dragStart.current = null;
 
     if (Math.abs(x) > 120) {
@@ -2060,9 +2061,13 @@ function SwipeCard({
       onSwipe?.(dir);
       setTimeout(onRemove, 400);
     } else {
+      // If barely moved, treat as a tap/click → open profile
+      if (Math.abs(x) < 5 && Math.abs(y) < 5) {
+        onViewProfile?.();
+      }
       setState({ x: 0, y: 0, isDragging: false, transitioning: false });
     }
-  }, [onRemove, onSwipe, state.y]);
+  }, [onRemove, onSwipe, onViewProfile, state.y]);
 
   const likeOpacity = isTop ? Math.max(0, Math.min(1, state.x / 150)) : 0;
   const nopeOpacity = isTop ? Math.max(0, Math.min(1, -state.x / 150)) : 0;
@@ -2198,13 +2203,6 @@ function SwipeCard({
               className="h-9 w-9 rounded-xl border-[3px] border-blue-300/40 bg-blue-500/20 backdrop-blur-sm flex items-center justify-center text-blue-300 hover:bg-blue-500/40 hover:border-blue-300/60 transition-all hover:scale-110 active:scale-95"
             >
               <MessageCircle className="h-3.5 w-3.5" />
-            </button>
-            <button
-              data-gallery-arrow
-              onClick={(e) => { e.stopPropagation(); onViewProfile?.(); }}
-              className="h-9 w-9 rounded-xl border-[3px] border-violet-300/40 bg-violet-500/20 backdrop-blur-sm flex items-center justify-center text-violet-300 hover:bg-violet-500/40 hover:border-violet-300/60 transition-all hover:scale-110 active:scale-95"
-            >
-              <Eye className="h-3.5 w-3.5" />
             </button>
           </div>
         </div>
