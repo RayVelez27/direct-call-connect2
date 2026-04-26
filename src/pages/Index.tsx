@@ -1,11 +1,10 @@
 import Navbar from "@/components/Navbar";
-import Hero from "@/components/Hero";
-
-import CtaBanner from "@/components/CtaBanner";
-import ExpertMatching from "@/components/ExpertMatching";
-
-import MakeItHappen from "@/components/MakeItHappen";
-import PlezyyPro from "@/components/PlezyyPro";
+import HomeHero from "@/components/HomeHero";
+import StatsStrip from "@/components/StatsStrip";
+import BrowseCategories from "@/components/BrowseCategories";
+import HowItWorksSection from "@/components/HowItWorksSection";
+import StartEarningCta from "@/components/StartEarningCta";
+import TrustStrip from "@/components/TrustStrip";
 import Footer from "@/components/Footer";
 
 const Index = () => {
@@ -13,13 +12,12 @@ const Index = () => {
     <div className="min-h-screen bg-white dark:bg-gray-900">
       <Navbar />
       <main>
-        <Hero />
-
-        <CtaBanner />
-        <ExpertMatching />
-
-        <MakeItHappen />
-        <PlezyyPro />
+        <HomeHero />
+        <StatsStrip />
+        <BrowseCategories />
+        <HowItWorksSection />
+        <StartEarningCta />
+        <TrustStrip />
       </main>
       <Footer />
     </div>

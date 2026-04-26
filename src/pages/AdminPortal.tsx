@@ -1,820 +1,1602 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import {
   LayoutDashboard,
+  LineChart,
   Users,
-  ShieldCheck,
-  Flag,
-  DollarSign,
-  Settings,
-  Search,
-  MoreHorizontal,
-  TrendingUp,
-  TrendingDown,
-  ArrowUpRight,
-  Eye,
-  Ban,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  AlertTriangle,
-  UserCheck,
-  UserX,
-  FileText,
-  Image,
-  Video,
+  Star,
+  Heart,
+  Film,
   MessageSquare,
-  CreditCard,
-  Activity,
+  AlertTriangle,
   Globe,
-  ChevronLeft,
-  ChevronRight,
+  DollarSign,
+  Send,
+  Megaphone,
+  Settings,
+  Trophy,
+  Search,
   Bell,
   LogOut,
-  Filter,
-  Download,
-  RefreshCw,
+  TrendingUp,
+  TrendingDown,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import plezyyLogo from "@/assets/Untitled design - 2026-03-27T091410.050.png";
 
-const adminNav = [
-  { label: "Dashboard", icon: LayoutDashboard, id: "dashboard" },
-  { label: "Users", icon: Users, id: "users" },
-  { label: "Verifications", icon: ShieldCheck, id: "verifications", badge: 12 },
-  { label: "Reports", icon: Flag, id: "reports", badge: 5 },
-  { label: "Transactions", icon: DollarSign, id: "transactions" },
-  { label: "Content", icon: Image, id: "content" },
-  { label: "Platform", icon: Settings, id: "platform" },
-];
+type PageId =
+  | "dashboard"
+  | "analytics"
+  | "users"
+  | "creators"
+  | "fans"
+  | "content"
+  | "messages"
+  | "reports"
+  | "ip"
+  | "finance"
+  | "payouts"
+  | "announcements"
+  | "config"
+  | "performance"
+  | "audit";
 
-// Mock data
-const mockUsers = [
-  { id: 1, name: "Valentina S.", email: "val@example.com", role: "creator", status: "active", joined: "Jan 12, 2025", revenue: "$4,230", verified: true },
-  { id: 2, name: "Mike R.", email: "mike@example.com", role: "consumer", status: "active", joined: "Feb 3, 2025", revenue: "$0", verified: false },
-  { id: 3, name: "Sophia L.", email: "sophia@example.com", role: "creator", status: "active", joined: "Mar 8, 2025", revenue: "$1,890", verified: true },
-  { id: 4, name: "Tyler J.", email: "tyler@example.com", role: "consumer", status: "suspended", joined: "Jan 20, 2025", revenue: "$0", verified: false },
-  { id: 5, name: "Luna M.", email: "luna@example.com", role: "creator", status: "active", joined: "Apr 1, 2025", revenue: "$3,100", verified: true },
-  { id: 6, name: "David K.", email: "david@example.com", role: "consumer", status: "active", joined: "Feb 15, 2025", revenue: "$0", verified: false },
-  { id: 7, name: "Aria N.", email: "aria@example.com", role: "creator", status: "pending", joined: "Feb 18, 2026", revenue: "$0", verified: false },
-  { id: 8, name: "Jake P.", email: "jake@example.com", role: "consumer", status: "active", joined: "Jan 5, 2026", revenue: "$0", verified: false },
-];
+type StatusKind =
+  | "active"
+  | "suspended"
+  | "banned"
+  | "pending"
+  | "flagged"
+  | "approved"
+  | "paid"
+  | "held"
+  | "refunded"
+  | "creator"
+  | "fan"
+  | "high"
+  | "medium"
+  | "low";
 
-const mockVerifications = [
-  { id: 1, name: "Aria N.", submitted: "Feb 18, 2026", type: "Passport", status: "pending" },
-  { id: 2, name: "Carmen B.", submitted: "Feb 17, 2026", type: "Driver's License", status: "pending" },
-  { id: 3, name: "Jade W.", submitted: "Feb 16, 2026", type: "National ID", status: "pending" },
-  { id: 4, name: "Mia T.", submitted: "Feb 16, 2026", type: "Passport", status: "pending" },
-  { id: 5, name: "Valentina S.", submitted: "Jan 10, 2025", type: "Passport", status: "approved" },
-  { id: 6, name: "Sophia L.", submitted: "Mar 5, 2025", type: "Driver's License", status: "approved" },
-  { id: 7, name: "Luna M.", submitted: "Mar 28, 2025", type: "National ID", status: "approved" },
-  { id: 8, name: "Zara F.", submitted: "Feb 14, 2026", type: "Passport", status: "rejected" },
-];
+const statusStyles: Record<StatusKind, string> = {
+  active: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
+  approved: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
+  paid: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
+  suspended: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+  held: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+  flagged: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
+  medium: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
+  banned: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
+  refunded: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
+  high: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
+  pending: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+  low: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+  creator: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+  fan: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
+};
 
-const mockReports = [
-  { id: 1, reporter: "Mike R.", reported: "Unknown User", reason: "Fake profile", status: "open", date: "Feb 19, 2026", priority: "high" },
-  { id: 2, reporter: "Tyler J.", reported: "Sophia L.", reason: "Misleading service description", status: "open", date: "Feb 18, 2026", priority: "medium" },
-  { id: 3, reporter: "David K.", reported: "Luna M.", reason: "No-show on session", status: "investigating", date: "Feb 17, 2026", priority: "high" },
-  { id: 4, reporter: "Jake P.", reported: "Carmen B.", reason: "Inappropriate content in preview", status: "open", date: "Feb 16, 2026", priority: "low" },
-  { id: 5, reporter: "Aria N.", reported: "Mike R.", reason: "Harassment in messages", status: "resolved", date: "Feb 10, 2026", priority: "high" },
-];
-
-const mockTransactions = [
-  { id: "TXN-001", consumer: "Mike R.", creator: "Valentina S.", amount: "$55.00", fee: "$5.50", status: "completed", date: "Feb 19, 2026" },
-  { id: "TXN-002", consumer: "David K.", creator: "Sophia L.", amount: "$99.00", fee: "$9.90", status: "completed", date: "Feb 18, 2026" },
-  { id: "TXN-003", consumer: "Jake P.", creator: "Luna M.", amount: "$25.00", fee: "$2.50", status: "pending", date: "Feb 18, 2026" },
-  { id: "TXN-004", consumer: "Tyler J.", creator: "Valentina S.", amount: "$55.00", fee: "$5.50", status: "refunded", date: "Feb 17, 2026" },
-  { id: "TXN-005", consumer: "Mike R.", creator: "Luna M.", amount: "$99.00", fee: "$9.90", status: "completed", date: "Feb 16, 2026" },
-  { id: "TXN-006", consumer: "David K.", creator: "Valentina S.", amount: "$25.00", fee: "$2.50", status: "completed", date: "Feb 15, 2026" },
-];
-
-const mockContent = [
-  { id: 1, creator: "Valentina S.", type: "video", title: "Preview clip", status: "approved", flagged: false, date: "Feb 18, 2026" },
-  { id: 2, creator: "Sophia L.", type: "image", title: "Profile photo set", status: "approved", flagged: false, date: "Feb 17, 2026" },
-  { id: 3, creator: "Luna M.", type: "video", title: "Intro video", status: "pending", flagged: false, date: "Feb 18, 2026" },
-  { id: 4, creator: "Carmen B.", type: "image", title: "Gallery upload", status: "pending", flagged: true, date: "Feb 17, 2026" },
-  { id: 5, creator: "Aria N.", type: "image", title: "Cover photo", status: "pending", flagged: false, date: "Feb 18, 2026" },
-  { id: 6, creator: "Jade W.", type: "gif", title: "Teaser animation", status: "rejected", flagged: true, date: "Feb 16, 2026" },
-];
-
-export default function AdminPortal() {
-  const [activeTab, setActiveTab] = useState("dashboard");
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-
+function StatusPill({ kind, children }: { kind: StatusKind; children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-background flex">
-      {/* Sidebar */}
-      <aside
-        className={`sticky top-0 h-screen bg-card border-r border-border flex flex-col transition-all duration-300 ${
-          sidebarCollapsed ? "w-[72px]" : "w-60"
-        }`}
-      >
-        {/* Logo */}
-        <div className="h-14 flex items-center justify-between px-4 border-b border-border shrink-0">
-          {!sidebarCollapsed && (
-            <div className="flex items-center gap-2">
-              <img alt="Plezyy" className="h-7 w-auto dark:invert" src={plezyyLogo} />
-              <Badge variant="destructive" className="text-[9px] h-4 px-1.5">ADMIN</Badge>
-            </div>
-          )}
-          <button
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground"
-          >
-            {sidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-          </button>
-        </div>
+    <span className={`inline-block text-[11px] font-bold px-2.5 py-0.5 rounded-full ${statusStyles[kind]}`}>
+      {children}
+    </span>
+  );
+}
 
-        {/* Nav */}
-        <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
-          {adminNav.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                activeTab === item.id
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
-              } ${sidebarCollapsed ? "justify-center" : ""}`}
-            >
-              <item.icon className="h-4.5 w-4.5 shrink-0" />
-              {!sidebarCollapsed && (
-                <>
-                  <span className="flex-1 text-left">{item.label}</span>
-                  {item.badge && (
-                    <Badge variant={activeTab === item.id ? "secondary" : "destructive"} className="h-5 min-w-5 flex items-center justify-center text-[10px] px-1.5">
-                      {item.badge}
-                    </Badge>
-                  )}
-                </>
-              )}
-            </button>
-          ))}
-        </nav>
+function Avatar({ initials, className = "" }: { initials: string; className?: string }) {
+  return (
+    <span
+      className={`inline-flex items-center justify-center w-8 h-8 rounded-full bg-[#EBF1FF] dark:bg-[#4180FB]/20 text-[#1E4FBF] dark:text-[#A8C4FF] text-[13px] font-bold ${className}`}
+    >
+      {initials}
+    </span>
+  );
+}
 
-        {/* Admin user */}
-        <div className="border-t border-border p-3 shrink-0">
-          {!sidebarCollapsed ? (
-            <div className="flex items-center gap-2.5">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-destructive/10 text-destructive text-xs font-bold">AD</AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-foreground truncate">Admin</p>
-                <p className="text-[10px] text-muted-foreground">Super Admin</p>
-              </div>
-              <button className="p-1 rounded text-muted-foreground hover:text-foreground">
-                <LogOut className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          ) : (
-            <div className="flex justify-center">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-destructive/10 text-destructive text-xs font-bold">AD</AvatarFallback>
-              </Avatar>
-            </div>
-          )}
-        </div>
-      </aside>
+function StatCard({
+  label,
+  value,
+  change,
+  changeKind,
+  icon: Icon,
+}: {
+  label: string;
+  value: string;
+  change?: string;
+  changeKind?: "up" | "down" | "neutral";
+  icon?: React.ElementType;
+}) {
+  const changeColor =
+    changeKind === "up"
+      ? "text-green-600 dark:text-green-400"
+      : changeKind === "down"
+      ? "text-red-600 dark:text-red-400"
+      : "text-gray-500 dark:text-gray-400";
+  return (
+    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 relative">
+      {Icon && (
+        <Icon className="absolute top-4 right-4 w-5 h-5 text-gray-300 dark:text-gray-600" />
+      )}
+      <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">{label}</div>
+      <div className="text-2xl font-bold text-gray-900 dark:text-white">{value}</div>
+      {change && <div className={`text-xs mt-1 ${changeColor}`}>{change}</div>}
+    </div>
+  );
+}
 
-      {/* Main */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Top bar */}
-        <header className="sticky top-0 z-30 h-14 border-b border-border bg-background/80 backdrop-blur-sm flex items-center justify-between px-5 shrink-0">
-          <h1 className="text-sm font-semibold text-foreground capitalize">{activeTab}</h1>
-          <div className="flex items-center gap-3">
-            <div className="relative hidden sm:block">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <Input placeholder="Search..." className="pl-8 h-8 w-56 rounded-lg text-sm" />
+function TableCard({
+  title,
+  actions,
+  children,
+}: {
+  title: string;
+  actions?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden mb-5">
+      <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-200 dark:border-gray-800">
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white">{title}</h3>
+        {actions && <div className="flex gap-2">{actions}</div>}
+      </div>
+      <div className="overflow-x-auto">{children}</div>
+    </div>
+  );
+}
+
+const tableHeadCls =
+  "px-3.5 py-2.5 text-left text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800";
+const tableCellCls =
+  "px-3.5 py-3 text-sm text-gray-700 dark:text-gray-300 border-b border-gray-100 dark:border-gray-800/60";
+
+function PageHeader({ title, subtitle }: { title: string; subtitle: string }) {
+  return (
+    <div className="mb-5">
+      <h1 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h1>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{subtitle}</p>
+    </div>
+  );
+}
+
+function SmallBtn({
+  children,
+  onClick,
+  variant = "default",
+}: {
+  children: React.ReactNode;
+  onClick?: () => void;
+  variant?: "default" | "red" | "green";
+}) {
+  const base =
+    "text-[11px] px-2.5 py-1 rounded-full border whitespace-nowrap transition-colors";
+  const styles =
+    variant === "red"
+      ? "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-900 hover:bg-red-500 hover:text-white hover:border-red-500"
+      : variant === "green"
+      ? "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-900 hover:bg-green-600 hover:text-white hover:border-green-600"
+      : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-900 hover:bg-[#4180FB] hover:text-white hover:border-[#4180FB]";
+  return (
+    <button onClick={onClick} className={`${base} ${styles}`}>
+      {children}
+    </button>
+  );
+}
+
+function PeriodTabs({
+  options,
+  active,
+  onChange,
+}: {
+  options: string[];
+  active: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-1.5 mb-4">
+      {options.map((o) => (
+        <button
+          key={o}
+          onClick={() => onChange(o)}
+          className={`text-xs px-3.5 py-1 rounded-full border transition-colors ${
+            active === o
+              ? "bg-[#4180FB] text-white border-[#4180FB]"
+              : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400"
+          }`}
+        >
+          {o}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function BarChart({
+  data,
+  color = "#4180FB",
+  height = 100,
+}: {
+  data: { label: string; value: string; pct: number }[];
+  color?: string;
+  height?: number;
+}) {
+  return (
+    <div className="relative pt-5 pb-6">
+      <div className="flex items-end gap-1.5" style={{ height }}>
+        {data.map((d, i) => (
+          <div key={i} className="flex-1 relative">
+            <div className="absolute -top-4 left-1/2 -translate-x-1/2 text-[10px] font-bold text-[#1E4FBF] dark:text-[#A8C4FF] whitespace-nowrap">
+              {d.value}
             </div>
-            <button className="relative p-2 rounded-lg hover:bg-accent text-muted-foreground">
-              <Bell className="h-4 w-4" />
-              <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-destructive" />
-            </button>
+            <div
+              className="rounded-t-md transition-opacity hover:opacity-100 opacity-80"
+              style={{ height: `${d.pct}%`, background: color }}
+            />
+            <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] text-gray-400 whitespace-nowrap">
+              {d.label}
+            </div>
           </div>
-        </header>
-
-        {/* Content */}
-        <main className="flex-1 p-5 overflow-y-auto">
-          {activeTab === "dashboard" && <DashboardTab />}
-          {activeTab === "users" && <UsersTab />}
-          {activeTab === "verifications" && <VerificationsTab />}
-          {activeTab === "reports" && <ReportsTab />}
-          {activeTab === "transactions" && <TransactionsTab />}
-          {activeTab === "content" && <ContentModerationTab />}
-          {activeTab === "platform" && <PlatformTab />}
-        </main>
+        ))}
       </div>
     </div>
   );
 }
 
-/* ═══ DASHBOARD ═══ */
-function DashboardTab() {
-  const stats = [
-    { label: "Total Users", value: "1,247", change: "+12%", trend: "up", icon: Users },
-    { label: "Active Creators", value: "186", change: "+8%", trend: "up", icon: UserCheck },
-    { label: "Revenue (MTD)", value: "$34,520", change: "+23%", trend: "up", icon: DollarSign },
-    { label: "Active Sessions", value: "14", change: "-3%", trend: "down", icon: Activity },
+function DonutList({
+  rows,
+}: {
+  rows: { label: string; pct: number; color: string }[];
+}) {
+  return (
+    <div className="flex flex-col gap-2.5 mt-2">
+      {rows.map((r) => (
+        <div key={r.label} className="flex items-center gap-2.5">
+          <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: r.color }} />
+          <span className="text-sm text-gray-500 dark:text-gray-400 flex-1 truncate">{r.label}</span>
+          <span className="h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full flex-1 max-w-[160px] overflow-hidden">
+            <span
+              className="h-full block rounded-full"
+              style={{ width: `${r.pct}%`, background: r.color }}
+            />
+          </span>
+          <span className="text-sm font-bold text-gray-900 dark:text-white w-10 text-right">{r.pct}%</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ──────────── PAGE COMPONENTS ────────────
+
+function DashboardPage() {
+  const [period, setPeriod] = useState("Week");
+  return (
+    <div>
+      <PageHeader title="Welcome back, Joseph" subtitle="Here's everything happening on Plezyy right now." />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 mb-5">
+        <StatCard label="Total users" value="24,810" change="↑ 142 today" changeKind="up" icon={Users} />
+        <StatCard label="Active creators" value="3,204" change="↑ 38 this week" changeKind="up" icon={Star} />
+        <StatCard label="Revenue today" value="$8,420" change="↑ 12% vs yesterday" changeKind="up" icon={DollarSign} />
+        <StatCard label="Open reports" value="12" change="↑ 4 new today" changeKind="down" icon={AlertTriangle} />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
+        <div className="lg:col-span-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Revenue this week</h3>
+          <PeriodTabs options={["Week", "Month", "Year"]} active={period} onChange={setPeriod} />
+          <BarChart
+            data={[
+              { label: "Mon", value: "$5.2k", pct: 55 },
+              { label: "Tue", value: "$6.7k", pct: 70 },
+              { label: "Wed", value: "$4.6k", pct: 48 },
+              { label: "Thu", value: "$7.8k", pct: 82 },
+              { label: "Fri", value: "$8.6k", pct: 90 },
+              { label: "Sat", value: "$9.5k", pct: 100 },
+              { label: "Sun", value: "$8.4k", pct: 88 },
+            ]}
+          />
+        </div>
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Revenue by content type</h3>
+          <DonutList
+            rows={[
+              { label: "Custom videos", pct: 68, color: "#4180FB" },
+              { label: "Live chat", pct: 18, color: "#1E4FBF" },
+              { label: "Photo sets", pct: 9, color: "#16a34a" },
+              { label: "Other", pct: 5, color: "#f59e0b" },
+            ]}
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+        <StatCard label="Orders today" value="841" change="↑ 8% vs avg" changeKind="up" />
+        <StatCard label="Transactions (month)" value="18,402" change="↑ 21% MoM" changeKind="up" />
+        <StatCard label="Banned today" value="3" change="0 appeals" />
+        <StatCard label="Active countries" value="47" change="↑ 2 new this week" changeKind="up" />
+      </div>
+    </div>
+  );
+}
+
+function AnalyticsPage() {
+  return (
+    <div>
+      <PageHeader title="Analytics" subtitle="Platform-wide performance metrics." />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 mb-5">
+        <StatCard label="Total GMV (all time)" value="$1.24M" change="↑ Growing" changeKind="up" />
+        <StatCard label="Avg order value" value="$42.80" change="↑ $3.20 MoM" changeKind="up" />
+        <StatCard label="Platform take rate" value="20%" change="$248k earned" />
+        <StatCard label="Repeat buyer rate" value="61%" change="↑ 4% MoM" changeKind="up" />
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">New signups per day (last 7 days)</h3>
+          <BarChart
+            color="#1E4FBF"
+            height={80}
+            data={[
+              { label: "Mon", value: "120", pct: 60 },
+              { label: "Tue", value: "148", pct: 75 },
+              { label: "Wed", value: "98", pct: 50 },
+              { label: "Thu", value: "181", pct: 90 },
+              { label: "Fri", value: "202", pct: 100 },
+              { label: "Sat", value: "171", pct: 85 },
+              { label: "Sun", value: "138", pct: 70 },
+            ]}
+          />
+        </div>
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Top countries by revenue</h3>
+          <DonutList
+            rows={[
+              { label: "🇺🇸 USA", pct: 52, color: "#1E4FBF" },
+              { label: "🇬🇧 UK", pct: 18, color: "#16a34a" },
+              { label: "🇨🇦 Canada", pct: 12, color: "#f59e0b" },
+              { label: "🇦🇺 Australia", pct: 9, color: "#4180FB" },
+              { label: "🌍 Other", pct: 9, color: "#9ca3af" },
+            ]}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface UserRow {
+  initials: string;
+  name: string;
+  email: string;
+  role: "Creator" | "Fan";
+  joined: string;
+  status: "Active" | "Suspended" | "Banned";
+}
+const allUsers: UserRow[] = [
+  { initials: "AR", name: "Alexis Rivera", email: "alexis@email.com", role: "Creator", joined: "Jan 12, 2025", status: "Active" },
+  { initials: "JM", name: "Jordan Mills", email: "jordan@email.com", role: "Fan", joined: "Feb 3, 2025", status: "Active" },
+  { initials: "MK", name: "Mike Karr", email: "mike@email.com", role: "Fan", joined: "Mar 7, 2025", status: "Suspended" },
+  { initials: "YN", name: "Yuki Naka", email: "yuki@email.com", role: "Creator", joined: "Mar 19, 2025", status: "Active" },
+  { initials: "ST", name: "Sofia Torres", email: "sofia@email.com", role: "Creator", joined: "Apr 1, 2025", status: "Banned" },
+];
+
+function UsersPage({
+  onPasswordChange,
+  onDelete,
+}: {
+  onPasswordChange: (name: string) => void;
+  onDelete: (name: string) => void;
+}) {
+  const [q, setQ] = useState("");
+  const filtered = allUsers.filter(
+    (u) => u.name.toLowerCase().includes(q.toLowerCase()) || u.email.toLowerCase().includes(q.toLowerCase())
+  );
+  return (
+    <div>
+      <PageHeader title="All Users" subtitle="View, edit, suspend, or permanently delete any user account." />
+      <TableCard
+        title="User accounts (24,810 total)"
+        actions={
+          <>
+            <Input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search by name or email…"
+              className="h-8 w-48 rounded-full text-sm"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-full h-8 text-xs"
+              onClick={() => toast.success("Export CSV downloaded")}
+            >
+              Export CSV
+            </Button>
+          </>
+        }
+      >
+        <table className="w-full">
+          <thead>
+            <tr>
+              <th className={tableHeadCls}>User</th>
+              <th className={tableHeadCls}>Email</th>
+              <th className={tableHeadCls}>Password</th>
+              <th className={tableHeadCls}>Role</th>
+              <th className={tableHeadCls}>Joined</th>
+              <th className={tableHeadCls}>Status</th>
+              <th className={tableHeadCls}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((u) => (
+              <tr key={u.name} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                <td className={tableCellCls}>
+                  <div className="flex items-center gap-2">
+                    <Avatar initials={u.initials} />
+                    <span className="font-semibold text-gray-900 dark:text-white">{u.name}</span>
+                  </div>
+                </td>
+                <td className={`${tableCellCls} text-gray-500 dark:text-gray-400`}>{u.email}</td>
+                <td className={tableCellCls}>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs text-gray-500">••••••••</span>
+                    <SmallBtn onClick={() => onPasswordChange(u.name)}>Change</SmallBtn>
+                  </div>
+                </td>
+                <td className={tableCellCls}>
+                  <StatusPill kind={u.role === "Creator" ? "creator" : "fan"}>{u.role}</StatusPill>
+                </td>
+                <td className={`${tableCellCls} text-gray-500 dark:text-gray-400`}>{u.joined}</td>
+                <td className={tableCellCls}>
+                  <StatusPill
+                    kind={u.status === "Active" ? "active" : u.status === "Suspended" ? "suspended" : "banned"}
+                  >
+                    {u.status}
+                  </StatusPill>
+                </td>
+                <td className={tableCellCls}>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {u.status === "Active" && (
+                      <>
+                        <SmallBtn onClick={() => toast.info(`Viewing ${u.name} profile`)}>View</SmallBtn>
+                        <SmallBtn onClick={() => toast.success(`${u.name} suspended`)}>Suspend</SmallBtn>
+                      </>
+                    )}
+                    {u.status === "Suspended" && (
+                      <SmallBtn variant="green" onClick={() => toast.success(`${u.name} reinstated`)}>
+                        Reinstate
+                      </SmallBtn>
+                    )}
+                    {u.status === "Banned" && (
+                      <SmallBtn variant="green" onClick={() => toast.success(`${u.name} unbanned`)}>
+                        Unban
+                      </SmallBtn>
+                    )}
+                    <SmallBtn variant="red" onClick={() => onDelete(u.name)}>
+                      Delete
+                    </SmallBtn>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </TableCard>
+    </div>
+  );
+}
+
+function CreatorsPage() {
+  const creators = [
+    { initials: "AR", name: "Alexis Rivera", ip: "104.28.41.12", email: "alexis@email.com", revenue: "$4,820", orders: 312, rating: "4.9", verified: "approved" as StatusKind, verifiedLabel: "Verified" },
+    { initials: "JM", name: "Jordan M.", ip: "198.51.100.22", email: "jordan@email.com", revenue: "$2,140", orders: 198, rating: "4.8", verified: "approved" as StatusKind, verifiedLabel: "Verified" },
+    { initials: "LV", name: "Luna V.", ip: "203.0.113.45", email: "luna@email.com", revenue: "$540", orders: 54, rating: "4.5", verified: "pending" as StatusKind, verifiedLabel: "Pending" },
+  ];
+  return (
+    <div>
+      <PageHeader title="Creator Management" subtitle="Manage verification, visibility, and creator performance." />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 mb-5">
+        <StatCard label="Total creators" value="3,204" />
+        <StatCard label="Pending verification" value="47" change="Needs review" changeKind="down" />
+        <StatCard label="Avg creator rating" value="4.7 ★" />
+        <StatCard label="Creators earning $1k+/mo" value="812" />
+      </div>
+      <TableCard title="Creator accounts">
+        <table className="w-full">
+          <thead>
+            <tr>
+              <th className={tableHeadCls}>Creator</th>
+              <th className={tableHeadCls}>IP Address</th>
+              <th className={tableHeadCls}>Email</th>
+              <th className={tableHeadCls}>Revenue (MTD)</th>
+              <th className={tableHeadCls}>Orders</th>
+              <th className={tableHeadCls}>Rating</th>
+              <th className={tableHeadCls}>Verified</th>
+              <th className={tableHeadCls}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {creators.map((c) => (
+              <tr key={c.name} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                <td className={tableCellCls}>
+                  <div className="flex items-center gap-2">
+                    <Avatar initials={c.initials} />
+                    <span className="font-semibold text-gray-900 dark:text-white">{c.name}</span>
+                  </div>
+                </td>
+                <td className={`${tableCellCls} font-mono text-xs text-gray-500`}>{c.ip}</td>
+                <td className={`${tableCellCls} text-gray-500 dark:text-gray-400`}>{c.email}</td>
+                <td className={`${tableCellCls} font-bold text-gray-900 dark:text-white`}>{c.revenue}</td>
+                <td className={tableCellCls}>{c.orders}</td>
+                <td className={tableCellCls}>★ {c.rating}</td>
+                <td className={tableCellCls}>
+                  <StatusPill kind={c.verified}>{c.verifiedLabel}</StatusPill>
+                </td>
+                <td className={tableCellCls}>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {c.verifiedLabel === "Pending" ? (
+                      <>
+                        <SmallBtn variant="green" onClick={() => toast.success(`${c.name} verified`)}>Approve</SmallBtn>
+                        <SmallBtn variant="red" onClick={() => toast.error(`${c.name} rejected`)}>Reject</SmallBtn>
+                      </>
+                    ) : (
+                      <>
+                        <SmallBtn onClick={() => toast.info(`Viewing ${c.name}`)}>View</SmallBtn>
+                        <SmallBtn variant="red" onClick={() => toast.success(`${c.name} suspended`)}>Suspend</SmallBtn>
+                      </>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </TableCard>
+    </div>
+  );
+}
+
+function FansPage() {
+  const fans = [
+    { initials: "MK", name: "Mike K.", email: "mike@email.com", ip: "192.168.1.44", spent: "$1,240", joined: "Feb 2025", status: "active" as StatusKind, statusLabel: "Active" },
+    { initials: "RD", name: "Ryan D.", email: "ryan@email.com", ip: "10.0.0.88", spent: "$320", joined: "Mar 2025", status: "flagged" as StatusKind, statusLabel: "Flagged" },
+  ];
+  return (
+    <div>
+      <PageHeader title="Fan Accounts" subtitle="Monitor fan activity, spending, and reported behavior." />
+      <TableCard
+        title="Fan accounts"
+        actions={<Input placeholder="Search fans…" className="h-8 w-48 rounded-full text-sm" />}
+      >
+        <table className="w-full">
+          <thead>
+            <tr>
+              <th className={tableHeadCls}>Fan</th>
+              <th className={tableHeadCls}>Email</th>
+              <th className={tableHeadCls}>IP Address</th>
+              <th className={tableHeadCls}>Total Spent</th>
+              <th className={tableHeadCls}>Joined</th>
+              <th className={tableHeadCls}>Status</th>
+              <th className={tableHeadCls}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {fans.map((f) => (
+              <tr key={f.name} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                <td className={tableCellCls}>
+                  <div className="flex items-center gap-2">
+                    <Avatar initials={f.initials} />
+                    <span className="font-semibold text-gray-900 dark:text-white">{f.name}</span>
+                  </div>
+                </td>
+                <td className={`${tableCellCls} text-gray-500 dark:text-gray-400`}>{f.email}</td>
+                <td className={`${tableCellCls} font-mono text-xs text-gray-500`}>{f.ip}</td>
+                <td className={`${tableCellCls} font-bold text-gray-900 dark:text-white`}>{f.spent}</td>
+                <td className={`${tableCellCls} text-gray-500 dark:text-gray-400`}>{f.joined}</td>
+                <td className={tableCellCls}>
+                  <StatusPill kind={f.status}>{f.statusLabel}</StatusPill>
+                </td>
+                <td className={tableCellCls}>
+                  <div className="flex gap-1.5">
+                    <SmallBtn>{f.statusLabel === "Flagged" ? "Review" : "View"}</SmallBtn>
+                    <SmallBtn variant="red">{f.statusLabel === "Flagged" ? "Ban" : "Suspend"}</SmallBtn>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </TableCard>
+    </div>
+  );
+}
+
+function ContentPage() {
+  const items = [
+    { initials: "AR", name: "Alexis R.", type: "Video", reason: "Possible TOS violation", reporter: "AI auto-flag", date: "Today" },
+    { initials: "ST", name: "Sofia T.", type: "Photo", reason: "User report", reporter: "fan@email.com", date: "Yesterday" },
+    { initials: "LV", name: "Luna V.", type: "Post text", reason: "Spam / solicitation", reporter: "2 users", date: "Apr 19" },
+  ];
+  return (
+    <div>
+      <PageHeader title="Content Moderation" subtitle="Review flagged posts, videos, and profile content before or after publishing." />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 mb-5">
+        <StatCard label="Flagged items" value="7" change="Needs review" changeKind="down" />
+        <StatCard label="Approved today" value="42" />
+        <StatCard label="Removed today" value="5" />
+        <StatCard label="Auto-flagged (AI)" value="3" />
+      </div>
+      <TableCard title="Flagged content queue">
+        <table className="w-full">
+          <thead>
+            <tr>
+              <th className={tableHeadCls}>Creator</th>
+              <th className={tableHeadCls}>Content type</th>
+              <th className={tableHeadCls}>Reason flagged</th>
+              <th className={tableHeadCls}>Reported by</th>
+              <th className={tableHeadCls}>Date</th>
+              <th className={tableHeadCls}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((it) => (
+              <tr key={it.name + it.type} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                <td className={tableCellCls}>
+                  <div className="flex items-center gap-2">
+                    <Avatar initials={it.initials} />
+                    <span className="font-semibold text-gray-900 dark:text-white">{it.name}</span>
+                  </div>
+                </td>
+                <td className={tableCellCls}>{it.type}</td>
+                <td className={`${tableCellCls} text-gray-500 dark:text-gray-400`}>{it.reason}</td>
+                <td className={`${tableCellCls} text-gray-500 dark:text-gray-400`}>{it.reporter}</td>
+                <td className={`${tableCellCls} text-gray-500 dark:text-gray-400`}>{it.date}</td>
+                <td className={tableCellCls}>
+                  <div className="flex gap-1.5 flex-wrap">
+                    <SmallBtn onClick={() => toast.info("Opening content preview")}>Preview</SmallBtn>
+                    <SmallBtn variant="green" onClick={() => toast.success("Content approved")}>Approve</SmallBtn>
+                    <SmallBtn variant="red" onClick={() => toast.success("Content removed")}>Remove</SmallBtn>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </TableCard>
+    </div>
+  );
+}
+
+function MessagesPage() {
+  const messages = [
+    { initials: "AR", meta: "Alexis Rivera → Mike K. · Today 2:14pm", body: "Hey! Your order is ready, I'll send the link now 🌹", flagged: false },
+    { initials: "RD", meta: "Ryan D. → Jordan M. · Today 11:32am", body: "Can we do this off-platform? I'll pay you directly...", flagged: true },
+    { initials: "YN", meta: "Yuki N. → Sofia T. · Yesterday 8:44pm", body: "Loved your latest post! Can you do a custom voice note for me?", flagged: false },
+    { initials: "MK", meta: "Mike K. → Alexis R. · Apr 18 5:01pm", body: "That was amazing, ordering again for sure. Thank you!", flagged: false },
+  ];
+  return (
+    <div>
+      <PageHeader title="Message Monitoring" subtitle="Read all platform messages. Flagged messages are highlighted." />
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-200 dark:border-gray-800">
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white">Recent messages</h3>
+          <Input placeholder="Search messages…" className="h-8 w-48 rounded-full text-sm" />
+        </div>
+        <div className="px-5 py-2">
+          {messages.map((m, i) => (
+            <div
+              key={i}
+              className="flex gap-3 py-3 border-b border-gray-100 dark:border-gray-800/60 last:border-b-0"
+            >
+              <Avatar initials={m.initials} className="w-9 h-9 mt-0.5" />
+              <div className="flex-1">
+                <div className="text-xs text-gray-400 mb-1 flex items-center gap-2">
+                  {m.meta}
+                  {m.flagged && (
+                    <span className="bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                      FLAGGED
+                    </span>
+                  )}
+                </div>
+                <div className="text-sm text-gray-900 dark:text-gray-100">{m.body}</div>
+                {m.flagged && (
+                  <div className="mt-2 flex gap-1.5">
+                    <SmallBtn variant="red" onClick={() => toast.success("Message removed + user warned")}>
+                      Remove &amp; warn user
+                    </SmallBtn>
+                    <SmallBtn onClick={() => toast.info("Dismissed")}>Dismiss</SmallBtn>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReportsPage() {
+  const reports = [
+    { reporter: "fan001@email.com", target: "Sofia Torres", reason: "Harassment", date: "Today", priority: "high" as StatusKind, priorityLabel: "High" },
+    { reporter: "fan204@email.com", target: "Mike Karr", reason: "Attempted off-platform payment", date: "Yesterday", priority: "medium" as StatusKind, priorityLabel: "Medium" },
+    { reporter: "fan512@email.com", target: "Luna V.", reason: "Spam messages", date: "Apr 18", priority: "low" as StatusKind, priorityLabel: "Low" },
+  ];
+  return (
+    <div>
+      <PageHeader title="User Reports" subtitle="All reports submitted by users against creators or other fans." />
+      <TableCard title="Open reports (12)">
+        <table className="w-full">
+          <thead>
+            <tr>
+              <th className={tableHeadCls}>Reporter</th>
+              <th className={tableHeadCls}>Reported user</th>
+              <th className={tableHeadCls}>Reason</th>
+              <th className={tableHeadCls}>Date</th>
+              <th className={tableHeadCls}>Priority</th>
+              <th className={tableHeadCls}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {reports.map((r) => (
+              <tr key={r.target + r.reason} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                <td className={`${tableCellCls} text-gray-500 dark:text-gray-400`}>{r.reporter}</td>
+                <td className={`${tableCellCls} font-bold text-gray-900 dark:text-white`}>{r.target}</td>
+                <td className={tableCellCls}>{r.reason}</td>
+                <td className={`${tableCellCls} text-gray-500 dark:text-gray-400`}>{r.date}</td>
+                <td className={tableCellCls}>
+                  <StatusPill kind={r.priority}>{r.priorityLabel}</StatusPill>
+                </td>
+                <td className={tableCellCls}>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {r.priorityLabel === "High" && (
+                      <SmallBtn variant="red" onClick={() => toast.success(`${r.target} banned`)}>Ban user</SmallBtn>
+                    )}
+                    {r.priorityLabel === "Medium" && (
+                      <>
+                        <SmallBtn onClick={() => toast.success(`Warning sent to ${r.target}`)}>Warn</SmallBtn>
+                        <SmallBtn variant="red">Suspend</SmallBtn>
+                      </>
+                    )}
+                    {r.priorityLabel === "Low" && <SmallBtn>Review</SmallBtn>}
+                    <SmallBtn onClick={() => toast.info("Dismissed")}>Dismiss</SmallBtn>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </TableCard>
+    </div>
+  );
+}
+
+function IpPage() {
+  const [ip, setIp] = useState("");
+  const blocked = [
+    { ip: "203.0.113.99", user: "banned_user@email.com", reason: "Chargeback fraud", date: "Apr 10, 2025" },
+    { ip: "198.51.100.77", user: "spammer@email.com", reason: "Mass spam messages", date: "Apr 14, 2025" },
+    { ip: "10.20.30.40", user: "Unknown", reason: "Multiple failed login attempts", date: "Apr 20, 2025" },
+  ];
+  const creatorIps = [
+    { name: "Alexis Rivera", ip: "104.28.41.12", country: "🇺🇸 USA", lastActive: "Today 3:22pm" },
+    { name: "Jordan M.", ip: "198.51.100.22", country: "🇬🇧 UK", lastActive: "Today 1:40pm" },
+    { name: "Yuki Naka", ip: "203.0.113.45", country: "🇯🇵 Japan", lastActive: "Yesterday" },
+  ];
+  return (
+    <div>
+      <PageHeader title="IP Address Management" subtitle="View creator IP addresses and block suspicious or abusive IPs." />
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5 mb-5">
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Block an IP address</h3>
+        <div className="flex gap-2 mb-2">
+          <Input
+            value={ip}
+            onChange={(e) => setIp(e.target.value)}
+            placeholder="Enter IP address (e.g. 192.168.1.1)"
+            className="rounded-full"
+          />
+          <Button
+            className="rounded-full bg-red-600 hover:bg-red-700"
+            onClick={() => {
+              if (!ip.trim()) return toast.error("Please enter an IP address");
+              toast.success(`IP ${ip} has been blocked`);
+              setIp("");
+            }}
+          >
+            Block IP
+          </Button>
+        </div>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          Blocked IPs cannot access Plezyy from any account or device.
+        </p>
+      </div>
+      <TableCard
+        title="Currently blocked IPs"
+        actions={
+          <Button variant="outline" size="sm" className="rounded-full h-8 text-xs" onClick={() => toast.success("IP log exported")}>
+            Export
+          </Button>
+        }
+      >
+        <table className="w-full">
+          <thead>
+            <tr>
+              <th className={tableHeadCls}>IP Address</th>
+              <th className={tableHeadCls}>Linked user</th>
+              <th className={tableHeadCls}>Reason</th>
+              <th className={tableHeadCls}>Blocked on</th>
+              <th className={tableHeadCls}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {blocked.map((b) => (
+              <tr key={b.ip} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                <td className={`${tableCellCls} font-mono text-xs`}>{b.ip}</td>
+                <td className={`${tableCellCls} text-gray-500 dark:text-gray-400`}>{b.user}</td>
+                <td className={tableCellCls}>{b.reason}</td>
+                <td className={`${tableCellCls} text-gray-500 dark:text-gray-400`}>{b.date}</td>
+                <td className={tableCellCls}>
+                  <SmallBtn variant="green" onClick={() => toast.success("IP unblocked")}>Unblock</SmallBtn>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </TableCard>
+      <TableCard
+        title="Creator IP log"
+        actions={<Input placeholder="Search by name…" className="h-8 w-48 rounded-full text-sm" />}
+      >
+        <table className="w-full">
+          <thead>
+            <tr>
+              <th className={tableHeadCls}>Creator</th>
+              <th className={tableHeadCls}>Last known IP</th>
+              <th className={tableHeadCls}>Country</th>
+              <th className={tableHeadCls}>Last active</th>
+              <th className={tableHeadCls}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {creatorIps.map((c) => (
+              <tr key={c.name} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                <td className={`${tableCellCls} font-bold text-gray-900 dark:text-white`}>{c.name}</td>
+                <td className={`${tableCellCls} font-mono text-xs`}>{c.ip}</td>
+                <td className={tableCellCls}>{c.country}</td>
+                <td className={`${tableCellCls} text-gray-500 dark:text-gray-400`}>{c.lastActive}</td>
+                <td className={tableCellCls}>
+                  <SmallBtn variant="red" onClick={() => toast.success(`IP ${c.ip} blocked`)}>Block IP</SmallBtn>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </TableCard>
+    </div>
+  );
+}
+
+function FinancePage() {
+  const [period, setPeriod] = useState("Today");
+  const txns = [
+    { id: "#TXN-88201", fan: "mike@email.com", creator: "Alexis R.", amount: "$49", cut: "$9.80", type: "Custom video", status: "paid" as StatusKind, statusLabel: "Paid", date: "Today 2:12pm" },
+    { id: "#TXN-88199", fan: "ryan@email.com", creator: "Jordan M.", amount: "$25", cut: "$5.00", type: "Live chat", status: "paid" as StatusKind, statusLabel: "Paid", date: "Today 11:04am" },
+    { id: "#TXN-88195", fan: "fan512@email.com", creator: "Yuki N.", amount: "$40", cut: "$8.00", type: "Photo set", status: "held" as StatusKind, statusLabel: "Held", date: "Today 9:30am" },
+    { id: "#TXN-88190", fan: "fan204@email.com", creator: "Sofia T.", amount: "$120", cut: "$24.00", type: "Premium video", status: "refunded" as StatusKind, statusLabel: "Refunded", date: "Yesterday" },
+  ];
+  return (
+    <div>
+      <PageHeader title="Financial Reports" subtitle="All revenue, transactions, refunds, and platform earnings." />
+      <PeriodTabs
+        options={["Today", "This week", "This month", "This year", "All time"]}
+        active={period}
+        onChange={setPeriod}
+      />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 mb-5">
+        <StatCard label="Gross transaction volume" value="$8,420" change="Today" />
+        <StatCard label="Platform revenue (20%)" value="$1,684" change="↑ 12% vs yesterday" changeKind="up" />
+        <StatCard label="Refunds issued" value="$120" change="3 refunds" changeKind="down" />
+        <StatCard label="Pending payouts" value="$24,810" change="To creators" />
+      </div>
+      <TableCard
+        title="Recent transactions"
+        actions={
+          <Button variant="outline" size="sm" className="rounded-full h-8 text-xs" onClick={() => toast.success("Finance report exported")}>
+            Export CSV
+          </Button>
+        }
+      >
+        <table className="w-full">
+          <thead>
+            <tr>
+              <th className={tableHeadCls}>Transaction ID</th>
+              <th className={tableHeadCls}>Fan</th>
+              <th className={tableHeadCls}>Creator</th>
+              <th className={tableHeadCls}>Amount</th>
+              <th className={tableHeadCls}>Platform cut</th>
+              <th className={tableHeadCls}>Type</th>
+              <th className={tableHeadCls}>Status</th>
+              <th className={tableHeadCls}>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {txns.map((t) => (
+              <tr key={t.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                <td className={`${tableCellCls} font-mono text-xs`}>{t.id}</td>
+                <td className={`${tableCellCls} text-gray-500 dark:text-gray-400`}>{t.fan}</td>
+                <td className={`${tableCellCls} font-bold text-gray-900 dark:text-white`}>{t.creator}</td>
+                <td className={`${tableCellCls} font-bold text-gray-900 dark:text-white`}>{t.amount}</td>
+                <td className={tableCellCls}>{t.cut}</td>
+                <td className={tableCellCls}>{t.type}</td>
+                <td className={tableCellCls}>
+                  <StatusPill kind={t.status}>{t.statusLabel}</StatusPill>
+                </td>
+                <td className={`${tableCellCls} text-gray-500 dark:text-gray-400`}>{t.date}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </TableCard>
+    </div>
+  );
+}
+
+function PayoutsPage() {
+  const payouts = [
+    { name: "Alexis Rivera", email: "alexis@email.com", amount: "$3,856", method: "CCBill", status: "held" as StatusKind, statusLabel: "Pending", paid: false },
+    { name: "Jordan M.", email: "jordan@email.com", amount: "$1,712", method: "Paxum", status: "held" as StatusKind, statusLabel: "Pending", paid: false },
+    { name: "Yuki Naka", email: "yuki@email.com", amount: "$432", method: "Paxum", status: "paid" as StatusKind, statusLabel: "Paid", paid: true },
+  ];
+  return (
+    <div>
+      <PageHeader title="Creator Payouts" subtitle="Approve, hold, or release creator earnings." />
+      <TableCard
+        title="Pending payouts"
+        actions={
+          <Button
+            size="sm"
+            className="rounded-full h-8 text-xs bg-green-600 hover:bg-green-700"
+            onClick={() => toast.success("All pending payouts approved")}
+          >
+            Approve all
+          </Button>
+        }
+      >
+        <table className="w-full">
+          <thead>
+            <tr>
+              <th className={tableHeadCls}>Creator</th>
+              <th className={tableHeadCls}>Email</th>
+              <th className={tableHeadCls}>Amount owed</th>
+              <th className={tableHeadCls}>Payment method</th>
+              <th className={tableHeadCls}>Status</th>
+              <th className={tableHeadCls}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {payouts.map((p) => (
+              <tr key={p.name} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                <td className={`${tableCellCls} font-bold text-gray-900 dark:text-white`}>{p.name}</td>
+                <td className={`${tableCellCls} text-gray-500 dark:text-gray-400`}>{p.email}</td>
+                <td className={`${tableCellCls} font-bold text-gray-900 dark:text-white`}>{p.amount}</td>
+                <td className={tableCellCls}>{p.method}</td>
+                <td className={tableCellCls}>
+                  <StatusPill kind={p.status}>{p.statusLabel}</StatusPill>
+                </td>
+                <td className={tableCellCls}>
+                  {p.paid ? (
+                    <SmallBtn onClick={() => toast.success("Receipt downloaded")}>Receipt</SmallBtn>
+                  ) : (
+                    <div className="flex gap-1.5">
+                      <SmallBtn variant="green" onClick={() => toast.success("Payout approved")}>Approve</SmallBtn>
+                      <SmallBtn variant="red" onClick={() => toast.info("Payout held")}>Hold</SmallBtn>
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </TableCard>
+    </div>
+  );
+}
+
+function AnnouncementsPage() {
+  const [target, setTarget] = useState("Everyone");
+  const [text, setText] = useState("");
+  const targets = ["Everyone", "Creators only", "Fans only", "Suspended users"];
+  const past = [
+    { msg: "🎉 Welcome to Plezyy! Explore thousands of creators.", to: "Everyone", date: "Apr 1, 2025", opened: "82%" },
+    { msg: "📢 New payout schedule effective May 1st.", to: "Creators", date: "Apr 15, 2025", opened: "94%" },
+    { msg: "🔒 Updated Terms of Service — please review.", to: "Everyone", date: "Apr 18, 2025", opened: "71%" },
+  ];
+  return (
+    <div>
+      <PageHeader title="Announcements" subtitle="Send messages or platform notices to all users, creators, or fans." />
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5 mb-5">
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Send an announcement</h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-2.5">Who should receive this?</p>
+        <div className="flex flex-wrap gap-2 mb-3">
+          {targets.map((t) => (
+            <button
+              key={t}
+              onClick={() => setTarget(t)}
+              className={`text-xs px-3.5 py-1 rounded-full border transition-colors ${
+                target === t
+                  ? "bg-[#4180FB] text-white border-[#4180FB]"
+                  : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400"
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+        <Textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Write your announcement here… (e.g. New features, maintenance window, policy updates)"
+          className="min-h-[90px]"
+        />
+        <div className="flex gap-2.5 mt-3 items-center flex-wrap">
+          <Button
+            className="rounded-full bg-[#4180FB] hover:bg-[#3268D4]"
+            onClick={() => toast.success(`Announcement sent to ${target}`)}
+          >
+            <Send className="w-4 h-4 mr-1.5" />
+            Send now
+          </Button>
+          <Button
+            variant="outline"
+            className="rounded-full"
+            onClick={() => toast.success("Announcement scheduled")}
+          >
+            Schedule for later
+          </Button>
+          <span className="text-xs text-gray-400 ml-auto">Push notification + in-app banner</span>
+        </div>
+      </div>
+      <TableCard title="Past announcements">
+        <table className="w-full">
+          <thead>
+            <tr>
+              <th className={tableHeadCls}>Message</th>
+              <th className={tableHeadCls}>Sent to</th>
+              <th className={tableHeadCls}>Date</th>
+              <th className={tableHeadCls}>Opened by</th>
+            </tr>
+          </thead>
+          <tbody>
+            {past.map((p) => (
+              <tr key={p.msg} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                <td className={tableCellCls}>{p.msg}</td>
+                <td className={tableCellCls}>{p.to}</td>
+                <td className={`${tableCellCls} text-gray-500 dark:text-gray-400`}>{p.date}</td>
+                <td className={tableCellCls}>{p.opened}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </TableCard>
+    </div>
+  );
+}
+
+function ConfigPage() {
+  const initialToggles = {
+    maintenance: false,
+    registration: true,
+    creatorApps: true,
+    ageGate: true,
+    aiFlagging: true,
+    referrals: true,
+    comments: false,
+    liveChat: true,
+  };
+  const [toggles, setToggles] = useState(initialToggles);
+  const setToggle = (k: keyof typeof initialToggles) => (v: boolean) =>
+    setToggles((t) => ({ ...t, [k]: v }));
+
+  return (
+    <div>
+      <PageHeader title="Platform Configuration" subtitle="Control all platform-wide settings and rules." />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5">
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Commission &amp; fees</h3>
+          {[
+            { label: "Platform fee (%)", value: "20" },
+            { label: "Min payout threshold", value: "$50" },
+            { label: "Payout frequency", value: "Weekly" },
+            { label: "Refund window (days)", value: "3" },
+          ].map((r) => (
+            <div
+              key={r.label}
+              className="flex items-center justify-between py-2 text-sm border-b border-gray-100 dark:border-gray-800/60 last:border-b-0"
+            >
+              <span className="text-gray-500 dark:text-gray-400">{r.label}</span>
+              <Input defaultValue={r.value} className="w-24 h-7 text-right text-sm" />
+            </div>
+          ))}
+        </div>
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5">
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Account rules</h3>
+          {[
+            { label: "Min creator age", value: "18" },
+            { label: "Max gigs per creator", value: "20" },
+            { label: "Profile approval required", value: "Yes" },
+            { label: "ID verification required", value: "Yes" },
+          ].map((r) => (
+            <div
+              key={r.label}
+              className="flex items-center justify-between py-2 text-sm border-b border-gray-100 dark:border-gray-800/60 last:border-b-0"
+            >
+              <span className="text-gray-500 dark:text-gray-400">{r.label}</span>
+              <Input defaultValue={r.value} className="w-24 h-7 text-right text-sm" />
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5">
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-2">Platform feature toggles</h3>
+        {[
+          { k: "maintenance" as const, title: "Maintenance mode", body: "Take the site offline for updates. Shows a maintenance page to all visitors." },
+          { k: "registration" as const, title: "New user registration", body: "Allow new fans and creators to sign up." },
+          { k: "creatorApps" as const, title: "Creator applications open", body: "Allow new creators to apply for accounts." },
+          { k: "ageGate" as const, title: "Age verification gate", body: "Require DOB verification before accessing the platform." },
+          { k: "aiFlagging" as const, title: "AI content auto-flagging", body: "Automatically flag potentially violating content for review." },
+          { k: "referrals" as const, title: "Creator referral program", body: "Allow creators to earn from referring other creators." },
+          { k: "comments" as const, title: "Fan commenting on posts", body: "Let fans comment on creator posts (currently disabled)." },
+          { k: "liveChat" as const, title: "Live chat feature", body: "Enable real-time live chat service bookings." },
+        ].map((t) => (
+          <div
+            key={t.k}
+            className="flex items-center justify-between gap-4 py-3 border-b border-gray-100 dark:border-gray-800/60 last:border-b-0"
+          >
+            <div>
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-white">{t.title}</h4>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t.body}</p>
+            </div>
+            <Switch checked={toggles[t.k]} onCheckedChange={setToggle(t.k)} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PerformancePage() {
+  const creators = [
+    { rank: "🥇 1", color: "text-amber-500", initials: "AR", name: "Alexis Rivera", revenue: "$4,820", orders: 312, rating: "4.9", top: "Custom videos" },
+    { rank: "🥈 2", color: "text-gray-400", initials: "JM", name: "Jordan M.", revenue: "$2,140", orders: 198, rating: "4.8", top: "Live chat" },
+    { rank: "🥉 3", color: "text-orange-700", initials: "YN", name: "Yuki Naka", revenue: "$1,880", orders: 230, rating: "4.9", top: "ASMR / Voice" },
+    { rank: "4", color: "", initials: "ST", name: "Sofia Torres", revenue: "$1,240", orders: 541, rating: "4.7", top: "Shoutouts" },
+    { rank: "5", color: "", initials: "MK", name: "Mia K.", revenue: "$980", orders: 87, rating: "5.0", top: "Coaching" },
+  ];
+  const gigs = [
+    { rank: "🥇 1", type: "Custom Videos", orders: "8,420", rev: "$371k", avg: "$44" },
+    { rank: "🥈 2", type: "Live Chat", orders: "4,210", rev: "$84k", avg: "$20" },
+    { rank: "🥉 3", type: "Photo Sets", orders: "2,840", rev: "$71k", avg: "$25" },
+    { rank: "4", type: "Shoutouts", orders: "1,920", rev: "$19k", avg: "$10" },
+    { rank: "5", type: "Voice Notes", orders: "1,440", rev: "$22k", avg: "$15" },
+  ];
+  const regions = [
+    { rank: "🥇 1", country: "🇺🇸 United States", users: "12,410", rev: "$641k", top: "Alexis Rivera" },
+    { rank: "🥈 2", country: "🇬🇧 United Kingdom", users: "4,200", rev: "$221k", top: "Jordan M." },
+    { rank: "🥉 3", country: "🇨🇦 Canada", users: "2,840", rev: "$148k", top: "Mia K." },
+    { rank: "4", country: "🇦🇺 Australia", users: "1,920", rev: "$110k", top: "Luna V." },
+    { rank: "5", country: "🇧🇷 Brazil", users: "1,440", rev: "$74k", top: "Sofia Torres" },
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-foreground">Admin Dashboard</h2>
-          <p className="text-sm text-muted-foreground">Platform overview and key metrics.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-2 text-xs">
-            <Download className="h-3.5 w-3.5" />
+    <div>
+      <PageHeader title="Best Performers" subtitle="Top creators, gigs, and regions driving the most revenue." />
+      <Tabs defaultValue="creators">
+        <TabsList className="mb-4">
+          <TabsTrigger value="creators">Top creators</TabsTrigger>
+          <TabsTrigger value="gigs">Top gigs</TabsTrigger>
+          <TabsTrigger value="regions">Top regions</TabsTrigger>
+        </TabsList>
+        <TabsContent value="creators">
+          <TableCard title="">
+            <table className="w-full">
+              <thead>
+                <tr>
+                  <th className={tableHeadCls}>Rank</th>
+                  <th className={tableHeadCls}>Creator</th>
+                  <th className={tableHeadCls}>Revenue (MTD)</th>
+                  <th className={tableHeadCls}>Orders</th>
+                  <th className={tableHeadCls}>Rating</th>
+                  <th className={tableHeadCls}>Top service</th>
+                </tr>
+              </thead>
+              <tbody>
+                {creators.map((c) => (
+                  <tr key={c.name} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                    <td className={tableCellCls}>
+                      <span className={`font-bold ${c.color}`}>{c.rank}</span>
+                    </td>
+                    <td className={tableCellCls}>
+                      <div className="flex items-center gap-2">
+                        <Avatar initials={c.initials} />
+                        <span className="font-bold text-gray-900 dark:text-white">{c.name}</span>
+                      </div>
+                    </td>
+                    <td className={`${tableCellCls} font-bold text-green-600`}>{c.revenue}</td>
+                    <td className={tableCellCls}>{c.orders}</td>
+                    <td className={tableCellCls}>★ {c.rating}</td>
+                    <td className={tableCellCls}>{c.top}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </TableCard>
+        </TabsContent>
+        <TabsContent value="gigs">
+          <TableCard title="">
+            <table className="w-full">
+              <thead>
+                <tr>
+                  <th className={tableHeadCls}>Rank</th>
+                  <th className={tableHeadCls}>Gig type</th>
+                  <th className={tableHeadCls}>Total orders</th>
+                  <th className={tableHeadCls}>Revenue</th>
+                  <th className={tableHeadCls}>Avg price</th>
+                </tr>
+              </thead>
+              <tbody>
+                {gigs.map((g) => (
+                  <tr key={g.type} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                    <td className={tableCellCls}>{g.rank}</td>
+                    <td className={`${tableCellCls} font-bold text-gray-900 dark:text-white`}>{g.type}</td>
+                    <td className={tableCellCls}>{g.orders}</td>
+                    <td className={`${tableCellCls} font-bold text-gray-900 dark:text-white`}>{g.rev}</td>
+                    <td className={tableCellCls}>{g.avg}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </TableCard>
+        </TabsContent>
+        <TabsContent value="regions">
+          <TableCard title="">
+            <table className="w-full">
+              <thead>
+                <tr>
+                  <th className={tableHeadCls}>Rank</th>
+                  <th className={tableHeadCls}>Country</th>
+                  <th className={tableHeadCls}>Users</th>
+                  <th className={tableHeadCls}>Revenue</th>
+                  <th className={tableHeadCls}>Top creator</th>
+                </tr>
+              </thead>
+              <tbody>
+                {regions.map((r) => (
+                  <tr key={r.country} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                    <td className={tableCellCls}>{r.rank}</td>
+                    <td className={tableCellCls}>{r.country}</td>
+                    <td className={tableCellCls}>{r.users}</td>
+                    <td className={`${tableCellCls} font-bold text-gray-900 dark:text-white`}>{r.rev}</td>
+                    <td className={tableCellCls}>{r.top}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </TableCard>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+function AuditPage() {
+  const rows = [
+    { admin: "Joseph (Owner)", action: "User banned", kind: "banned" as StatusKind, target: "Sofia Torres", ip: "72.44.10.18", time: "Today 3:02pm" },
+    { admin: "Joseph (Owner)", action: "Content approved", kind: "approved" as StatusKind, target: "Post #4821", ip: "72.44.10.18", time: "Today 1:44pm" },
+    { admin: "Joseph (Owner)", action: "IP blocked", kind: "flagged" as StatusKind, target: "203.0.113.99", ip: "72.44.10.18", time: "Apr 20, 11:02am" },
+    { admin: "Joseph (Owner)", action: "Password changed", kind: "pending" as StatusKind, target: "mike@email.com", ip: "72.44.10.18", time: "Apr 19, 4:30pm" },
+    { admin: "Joseph (Owner)", action: "Payout approved", kind: "approved" as StatusKind, target: "Alexis Rivera", ip: "72.44.10.18", time: "Apr 18, 9:10am" },
+  ];
+  return (
+    <div>
+      <PageHeader title="Audit Log" subtitle="Every admin action is recorded here for accountability and security." />
+      <TableCard
+        title="Admin action history"
+        actions={
+          <Button variant="outline" size="sm" className="rounded-full h-8 text-xs" onClick={() => toast.success("Audit log exported")}>
             Export
           </Button>
-          <Button variant="outline" size="sm" className="gap-2 text-xs">
-            <RefreshCw className="h-3.5 w-3.5" />
-            Refresh
-          </Button>
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((s) => (
-          <div key={s.label} className="rounded-xl border border-border bg-card p-4">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-medium text-muted-foreground">{s.label}</span>
-              <div className="p-1.5 rounded-lg bg-secondary">
-                <s.icon className="h-3.5 w-3.5 text-muted-foreground" />
-              </div>
-            </div>
-            <p className="text-2xl font-bold text-foreground">{s.value}</p>
-            <div className="flex items-center gap-1 mt-1">
-              {s.trend === "up" ? (
-                <ArrowUpRight className="h-3 w-3 text-green-500" />
-              ) : (
-                <TrendingDown className="h-3 w-3 text-red-500" />
-              )}
-              <span className={`text-xs font-semibold ${s.trend === "up" ? "text-green-500" : "text-red-500"}`}>
-                {s.change}
-              </span>
-              <span className="text-xs text-muted-foreground">vs last month</span>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Charts placeholder + action items */}
-      <div className="grid lg:grid-cols-3 gap-4">
-        {/* Revenue chart placeholder */}
-        <div className="lg:col-span-2 rounded-xl border border-border bg-card p-5">
-          <h3 className="text-sm font-semibold text-foreground mb-4">Revenue Overview</h3>
-          <div className="h-48 flex items-end gap-2 px-4">
-            {[35, 50, 42, 68, 55, 72, 80, 65, 90, 78, 85, 95].map((h, i) => (
-              <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                <div
-                  className="w-full rounded-t bg-primary/80 hover:bg-primary transition-colors"
-                  style={{ height: `${h * 1.8}px` }}
-                />
-                <span className="text-[9px] text-muted-foreground">
-                  {["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"][i]}
-                </span>
-              </div>
+        }
+      >
+        <table className="w-full">
+          <thead>
+            <tr>
+              <th className={tableHeadCls}>Admin</th>
+              <th className={tableHeadCls}>Action</th>
+              <th className={tableHeadCls}>Target</th>
+              <th className={tableHeadCls}>IP</th>
+              <th className={tableHeadCls}>Timestamp</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                <td className={`${tableCellCls} font-bold text-gray-900 dark:text-white`}>{r.admin}</td>
+                <td className={tableCellCls}>
+                  <StatusPill kind={r.kind}>{r.action}</StatusPill>
+                </td>
+                <td className={tableCellCls}>{r.target}</td>
+                <td className={`${tableCellCls} font-mono text-xs`}>{r.ip}</td>
+                <td className={`${tableCellCls} text-gray-500 dark:text-gray-400`}>{r.time}</td>
+              </tr>
             ))}
-          </div>
-        </div>
-
-        {/* Action items */}
-        <div className="rounded-xl border border-border bg-card p-5">
-          <h3 className="text-sm font-semibold text-foreground mb-4">Needs Attention</h3>
-          <div className="space-y-3">
-            {[
-              { icon: ShieldCheck, text: "12 pending verifications", color: "text-yellow-500", bg: "bg-yellow-500/10" },
-              { icon: Flag, text: "5 open reports", color: "text-red-500", bg: "bg-red-500/10" },
-              { icon: Image, text: "3 flagged content items", color: "text-orange-500", bg: "bg-orange-500/10" },
-              { icon: CreditCard, text: "1 failed payout", color: "text-red-500", bg: "bg-red-500/10" },
-              { icon: UserX, text: "2 suspended accounts", color: "text-muted-foreground", bg: "bg-secondary" },
-            ].map((item, i) => (
-              <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-secondary/50 cursor-pointer transition-colors">
-                <div className={`p-1.5 rounded-md ${item.bg}`}>
-                  <item.icon className={`h-3.5 w-3.5 ${item.color}`} />
-                </div>
-                <span className="text-sm text-foreground flex-1">{item.text}</span>
-                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Recent activity */}
-      <div className="rounded-xl border border-border bg-card p-5">
-        <h3 className="text-sm font-semibold text-foreground mb-4">Recent Activity</h3>
-        <div className="space-y-3">
-          {[
-            { time: "2 min ago", text: "New creator signup: Aria N.", type: "user" },
-            { time: "15 min ago", text: "Verification submitted: Carmen B.", type: "verification" },
-            { time: "32 min ago", text: "Report filed: Fake profile (by Mike R.)", type: "report" },
-            { time: "1 hr ago", text: "Transaction completed: $99.00 (David K. → Sophia L.)", type: "transaction" },
-            { time: "2 hrs ago", text: "Content flagged: Gallery upload by Carmen B.", type: "content" },
-            { time: "3 hrs ago", text: "Payout processed: $1,200 to Valentina S.", type: "payout" },
-          ].map((a, i) => (
-            <div key={i} className="flex items-start gap-3">
-              <span className="text-[10px] text-muted-foreground font-medium w-16 pt-0.5 shrink-0">{a.time}</span>
-              <div className="h-1.5 w-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
-              <span className="text-sm text-foreground">{a.text}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+          </tbody>
+        </table>
+      </TableCard>
     </div>
   );
 }
 
-/* ═══ USERS ═══ */
-function UsersTab() {
-  return (
-    <div className="space-y-5">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <h2 className="text-xl font-bold text-foreground">Users</h2>
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-            <Input placeholder="Search users..." className="pl-8 h-8 w-56 rounded-lg text-sm" />
-          </div>
-          <Button variant="outline" size="sm" className="gap-1.5 text-xs">
-            <Filter className="h-3.5 w-3.5" />
-            Filter
-          </Button>
-          <Button variant="outline" size="sm" className="gap-1.5 text-xs">
-            <Download className="h-3.5 w-3.5" />
-            Export
-          </Button>
-        </div>
-      </div>
+// ──────────── SIDEBAR NAV ────────────
 
-      <Tabs defaultValue="all">
-        <TabsList>
-          <TabsTrigger value="all" className="text-xs">All ({mockUsers.length})</TabsTrigger>
-          <TabsTrigger value="creators" className="text-xs">Creators ({mockUsers.filter(u => u.role === "creator").length})</TabsTrigger>
-          <TabsTrigger value="consumers" className="text-xs">Members ({mockUsers.filter(u => u.role === "consumer").length})</TabsTrigger>
-          <TabsTrigger value="suspended" className="text-xs">Suspended (1)</TabsTrigger>
-        </TabsList>
-      </Tabs>
-
-      <div className="rounded-xl border border-border overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="text-xs">User</TableHead>
-              <TableHead className="text-xs">Role</TableHead>
-              <TableHead className="text-xs">Status</TableHead>
-              <TableHead className="text-xs">Verified</TableHead>
-              <TableHead className="text-xs">Joined</TableHead>
-              <TableHead className="text-xs text-right">Revenue</TableHead>
-              <TableHead className="text-xs w-10"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {mockUsers.map((user) => (
-              <TableRow key={user.id}>
-                <TableCell>
-                  <div className="flex items-center gap-2.5">
-                    <Avatar className="h-7 w-7">
-                      <AvatarFallback className="text-[10px] font-bold bg-primary/10 text-primary">
-                        {user.name.split(" ").map(n => n[0]).join("")}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{user.name}</p>
-                      <p className="text-[11px] text-muted-foreground">{user.email}</p>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="secondary" className="text-[10px] capitalize">{user.role}</Badge>
-                </TableCell>
-                <TableCell>
-                  <StatusBadge status={user.status} />
-                </TableCell>
-                <TableCell>
-                  {user.verified ? (
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <XCircle className="h-4 w-4 text-muted-foreground/40" />
-                  )}
-                </TableCell>
-                <TableCell className="text-xs text-muted-foreground">{user.joined}</TableCell>
-                <TableCell className="text-xs text-right font-medium">{user.revenue}</TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className="p-1 rounded hover:bg-accent"><MoreHorizontal className="h-4 w-4 text-muted-foreground" /></button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem className="text-xs">View Profile</DropdownMenuItem>
-                      <DropdownMenuItem className="text-xs">Edit User</DropdownMenuItem>
-                      <DropdownMenuItem className="text-xs text-destructive">Suspend</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
-  );
+interface NavItem {
+  id: PageId;
+  label: string;
+  icon: React.ElementType;
+  badge?: number;
 }
 
-/* ═══ VERIFICATIONS ═══ */
-function VerificationsTab() {
-  return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-foreground">Verifications</h2>
-          <p className="text-sm text-muted-foreground">Review creator identity documents.</p>
-        </div>
-        <div className="flex items-center gap-4 text-sm">
-          <span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 text-yellow-500" /> 4 pending</span>
-          <span className="flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> 3 approved</span>
-          <span className="flex items-center gap-1.5"><XCircle className="h-3.5 w-3.5 text-red-500" /> 1 rejected</span>
-        </div>
-      </div>
+const navSections: { label: string; items: NavItem[] }[] = [
+  {
+    label: "Overview",
+    items: [
+      { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { id: "analytics", label: "Analytics", icon: LineChart },
+    ],
+  },
+  {
+    label: "People",
+    items: [
+      { id: "users", label: "All Users", icon: Users, badge: 3 },
+      { id: "creators", label: "Creators", icon: Star },
+      { id: "fans", label: "Fans", icon: Heart },
+    ],
+  },
+  {
+    label: "Content & Safety",
+    items: [
+      { id: "content", label: "Content Moderation", icon: Film, badge: 7 },
+      { id: "messages", label: "Messages", icon: MessageSquare },
+      { id: "reports", label: "Reports", icon: AlertTriangle, badge: 12 },
+      { id: "ip", label: "IP Management", icon: Globe },
+    ],
+  },
+  {
+    label: "Money",
+    items: [
+      { id: "finance", label: "Financial Reports", icon: DollarSign },
+      { id: "payouts", label: "Payouts", icon: Send },
+    ],
+  },
+  {
+    label: "Platform",
+    items: [
+      { id: "announcements", label: "Announcements", icon: Megaphone },
+      { id: "config", label: "Platform Config", icon: Settings },
+      { id: "performance", label: "Best Performers", icon: Trophy },
+      { id: "audit", label: "Audit Log", icon: Search },
+    ],
+  },
+];
 
-      <div className="rounded-xl border border-border overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="text-xs">Creator</TableHead>
-              <TableHead className="text-xs">Document Type</TableHead>
-              <TableHead className="text-xs">Submitted</TableHead>
-              <TableHead className="text-xs">Status</TableHead>
-              <TableHead className="text-xs w-48">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {mockVerifications.map((v) => (
-              <TableRow key={v.id}>
-                <TableCell>
-                  <div className="flex items-center gap-2.5">
-                    <Avatar className="h-7 w-7">
-                      <AvatarFallback className="text-[10px] font-bold bg-primary/10 text-primary">
-                        {v.name.split(" ").map(n => n[0]).join("")}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm font-medium">{v.name}</span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-xs text-muted-foreground">{v.type}</TableCell>
-                <TableCell className="text-xs text-muted-foreground">{v.submitted}</TableCell>
-                <TableCell><StatusBadge status={v.status} /></TableCell>
-                <TableCell>
-                  {v.status === "pending" ? (
-                    <div className="flex items-center gap-2">
-                      <Button size="sm" variant="outline" className="h-7 text-xs gap-1">
-                        <Eye className="h-3 w-3" /> Review
-                      </Button>
-                      <Button size="sm" className="h-7 text-xs gap-1 bg-green-600 hover:bg-green-700">
-                        <CheckCircle2 className="h-3 w-3" /> Approve
-                      </Button>
-                      <Button size="sm" variant="destructive" className="h-7 text-xs gap-1">
-                        <XCircle className="h-3 w-3" /> Reject
-                      </Button>
-                    </div>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">—</span>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
-  );
-}
+// ──────────── MAIN PAGE ────────────
 
-/* ═══ REPORTS ═══ */
-function ReportsTab() {
-  return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-foreground">Reports</h2>
-          <p className="text-sm text-muted-foreground">User-submitted reports and flagged issues.</p>
-        </div>
-      </div>
+type ModalState =
+  | { kind: "none" }
+  | { kind: "password"; target: string }
+  | { kind: "delete"; target: string };
 
-      <div className="rounded-xl border border-border overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="text-xs">Reporter</TableHead>
-              <TableHead className="text-xs">Reported User</TableHead>
-              <TableHead className="text-xs">Reason</TableHead>
-              <TableHead className="text-xs">Priority</TableHead>
-              <TableHead className="text-xs">Status</TableHead>
-              <TableHead className="text-xs">Date</TableHead>
-              <TableHead className="text-xs w-10"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {mockReports.map((r) => (
-              <TableRow key={r.id}>
-                <TableCell className="text-sm font-medium">{r.reporter}</TableCell>
-                <TableCell className="text-sm">{r.reported}</TableCell>
-                <TableCell className="text-xs text-muted-foreground max-w-48 truncate">{r.reason}</TableCell>
-                <TableCell>
-                  <Badge
-                    variant={r.priority === "high" ? "destructive" : "secondary"}
-                    className={`text-[10px] capitalize ${r.priority === "medium" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/10 dark:text-yellow-400 border-0" : ""}`}
-                  >
-                    {r.priority}
-                  </Badge>
-                </TableCell>
-                <TableCell><StatusBadge status={r.status} /></TableCell>
-                <TableCell className="text-xs text-muted-foreground">{r.date}</TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className="p-1 rounded hover:bg-accent"><MoreHorizontal className="h-4 w-4 text-muted-foreground" /></button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem className="text-xs">View Details</DropdownMenuItem>
-                      <DropdownMenuItem className="text-xs">Mark Investigating</DropdownMenuItem>
-                      <DropdownMenuItem className="text-xs">Resolve</DropdownMenuItem>
-                      <DropdownMenuItem className="text-xs text-destructive">Ban Reported User</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
-  );
-}
+export default function AdminPortal() {
+  const [active, setActive] = useState<PageId>("dashboard");
+  const [time, setTime] = useState("");
+  const [modal, setModal] = useState<ModalState>({ kind: "none" });
+  const [deleteConfirm, setDeleteConfirm] = useState("");
 
-/* ═══ TRANSACTIONS ═══ */
-function TransactionsTab() {
-  return (
-    <div className="space-y-5">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-bold text-foreground">Transactions</h2>
-          <p className="text-sm text-muted-foreground">All platform payments and payouts.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-1.5 text-xs">
-            <Filter className="h-3.5 w-3.5" />
-            Filter
-          </Button>
-          <Button variant="outline" size="sm" className="gap-1.5 text-xs">
-            <Download className="h-3.5 w-3.5" />
-            Export CSV
-          </Button>
-        </div>
-      </div>
+  useEffect(() => {
+    const tick = () => {
+      setTime(
+        new Date().toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        })
+      );
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="rounded-xl border border-border bg-card p-4">
-          <span className="text-xs text-muted-foreground">Total Volume (MTD)</span>
-          <p className="text-xl font-bold text-foreground mt-1">$34,520</p>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-4">
-          <span className="text-xs text-muted-foreground">Platform Fees (MTD)</span>
-          <p className="text-xl font-bold text-foreground mt-1">$3,452</p>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-4">
-          <span className="text-xs text-muted-foreground">Refunds (MTD)</span>
-          <p className="text-xl font-bold text-foreground mt-1">$55.00</p>
-        </div>
-      </div>
-
-      <div className="rounded-xl border border-border overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="text-xs">ID</TableHead>
-              <TableHead className="text-xs">Consumer</TableHead>
-              <TableHead className="text-xs">Creator</TableHead>
-              <TableHead className="text-xs text-right">Amount</TableHead>
-              <TableHead className="text-xs text-right">Fee</TableHead>
-              <TableHead className="text-xs">Status</TableHead>
-              <TableHead className="text-xs">Date</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {mockTransactions.map((t) => (
-              <TableRow key={t.id}>
-                <TableCell className="text-xs font-mono text-muted-foreground">{t.id}</TableCell>
-                <TableCell className="text-sm">{t.consumer}</TableCell>
-                <TableCell className="text-sm">{t.creator}</TableCell>
-                <TableCell className="text-sm text-right font-medium">{t.amount}</TableCell>
-                <TableCell className="text-xs text-right text-muted-foreground">{t.fee}</TableCell>
-                <TableCell><StatusBadge status={t.status} /></TableCell>
-                <TableCell className="text-xs text-muted-foreground">{t.date}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
-  );
-}
-
-/* ═══ CONTENT MODERATION ═══ */
-function ContentModerationTab() {
-  return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-foreground">Content Moderation</h2>
-          <p className="text-sm text-muted-foreground">Review uploaded media from creators.</p>
-        </div>
-      </div>
-
-      <Tabs defaultValue="pending">
-        <TabsList>
-          <TabsTrigger value="pending" className="text-xs">Pending Review (3)</TabsTrigger>
-          <TabsTrigger value="flagged" className="text-xs">Flagged (2)</TabsTrigger>
-          <TabsTrigger value="approved" className="text-xs">Approved</TabsTrigger>
-          <TabsTrigger value="rejected" className="text-xs">Rejected</TabsTrigger>
-        </TabsList>
-      </Tabs>
-
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {mockContent.map((item) => (
-          <div key={item.id} className="rounded-xl border border-border bg-card overflow-hidden">
-            <div className="aspect-video bg-gradient-to-br from-secondary to-muted flex items-center justify-center relative">
-              {item.type === "video" ? (
-                <Video className="h-8 w-8 text-muted-foreground/40" />
-              ) : item.type === "gif" ? (
-                <FileText className="h-8 w-8 text-muted-foreground/40" />
-              ) : (
-                <Image className="h-8 w-8 text-muted-foreground/40" />
-              )}
-              <Badge className="absolute top-2 left-2 text-[10px] capitalize">{item.type}</Badge>
-              {item.flagged && (
-                <Badge variant="destructive" className="absolute top-2 right-2 text-[10px] gap-1">
-                  <AlertTriangle className="h-2.5 w-2.5" />
-                  Flagged
-                </Badge>
-              )}
-            </div>
-            <div className="p-4">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-medium text-foreground">{item.title}</p>
-                <StatusBadge status={item.status} />
-              </div>
-              <p className="text-xs text-muted-foreground mb-3">By {item.creator} &middot; {item.date}</p>
-              {item.status === "pending" && (
-                <div className="flex items-center gap-2">
-                  <Button size="sm" className="flex-1 h-7 text-xs bg-green-600 hover:bg-green-700">Approve</Button>
-                  <Button size="sm" variant="destructive" className="flex-1 h-7 text-xs">Reject</Button>
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* ═══ PLATFORM SETTINGS ═══ */
-function PlatformTab() {
-  return (
-    <div className="space-y-6 max-w-3xl">
-      <div>
-        <h2 className="text-xl font-bold text-foreground">Platform Settings</h2>
-        <p className="text-sm text-muted-foreground">Global configuration for the Plezyy marketplace.</p>
-      </div>
-
-      {/* Fees */}
-      <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-          <DollarSign className="h-4 w-4" />
-          Commission & Fees
-        </h3>
-        <div className="grid sm:grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Platform Fee (%)</label>
-            <Input defaultValue="10" className="h-9 rounded-lg text-sm" />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Minimum Payout ($)</label>
-            <Input defaultValue="50" className="h-9 rounded-lg text-sm" />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Payout Frequency</label>
-            <Input defaultValue="Weekly" className="h-9 rounded-lg text-sm" disabled />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Stripe Connected</label>
-            <Input defaultValue="Yes — Live Mode" className="h-9 rounded-lg text-sm" disabled />
-          </div>
-        </div>
-      </div>
-
-      {/* Content rules */}
-      <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-          <ShieldCheck className="h-4 w-4" />
-          Content & Moderation
-        </h3>
-        <div className="space-y-3">
-          {[
-            { label: "Auto-flag explicit thumbnails", description: "AI scans uploads and auto-flags potentially explicit preview images.", default: true },
-            { label: "Require verification before publishing", description: "Creators must be verified before their services go live.", default: true },
-            { label: "Allow unverified profiles to be listed", description: "Show unverified profiles in search results with a warning badge.", default: false },
-            { label: "Enable content reporting", description: "Members can report services, profiles, or messages.", default: true },
-          ].map((item) => (
-            <div key={item.label} className="flex items-center justify-between py-1.5">
-              <div>
-                <p className="text-sm font-medium text-foreground">{item.label}</p>
-                <p className="text-xs text-muted-foreground">{item.description}</p>
-              </div>
-              <Switch defaultChecked={item.default} />
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Limits */}
-      <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-          <Globe className="h-4 w-4" />
-          Platform Limits
-        </h3>
-        <div className="grid sm:grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Max upload size (MB)</label>
-            <Input defaultValue="50" className="h-9 rounded-lg text-sm" />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Max services per creator</label>
-            <Input defaultValue="20" className="h-9 rounded-lg text-sm" />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Max gallery items</label>
-            <Input defaultValue="50" className="h-9 rounded-lg text-sm" />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Session timeout (min)</label>
-            <Input defaultValue="120" className="h-9 rounded-lg text-sm" />
-          </div>
-        </div>
-      </div>
-
-      <div className="flex justify-end">
-        <Button className="px-8">Save Settings</Button>
-      </div>
-    </div>
-  );
-}
-
-/* ═══ SHARED ═══ */
-function StatusBadge({ status }: { status: string }) {
-  const config: Record<string, { class: string; icon: any }> = {
-    active: { class: "bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400", icon: CheckCircle2 },
-    approved: { class: "bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400", icon: CheckCircle2 },
-    completed: { class: "bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400", icon: CheckCircle2 },
-    resolved: { class: "bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400", icon: CheckCircle2 },
-    pending: { class: "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/10 dark:text-yellow-400", icon: Clock },
-    investigating: { class: "bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400", icon: Eye },
-    open: { class: "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/10 dark:text-yellow-400", icon: AlertTriangle },
-    suspended: { class: "bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400", icon: Ban },
-    rejected: { class: "bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400", icon: XCircle },
-    refunded: { class: "bg-orange-100 text-orange-700 dark:bg-orange-500/10 dark:text-orange-400", icon: RefreshCw },
+  const handlePasswordChange = (target: string) => setModal({ kind: "password", target });
+  const handleDelete = (target: string) => {
+    setDeleteConfirm("");
+    setModal({ kind: "delete", target });
   };
-  const c = config[status] ?? config.pending;
+  const closeModal = () => setModal({ kind: "none" });
+  const confirmModal = () => {
+    if (modal.kind === "password") toast.success(`Password updated for ${modal.target}`);
+    if (modal.kind === "delete") toast.success(`${modal.target} permanently deleted`);
+    closeModal();
+  };
+
   return (
-    <Badge variant="secondary" className={`text-[10px] capitalize border-0 gap-1 ${c.class}`}>
-      <c.icon className="h-2.5 w-2.5" />
-      {status}
-    </Badge>
+    <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-950 overflow-hidden">
+      {/* TOP BAR */}
+      <div className="flex items-center justify-between px-6 h-14 bg-gray-950 border-b border-gray-800 flex-shrink-0">
+        <div className="flex items-center gap-3">
+          <img alt="Plezyy" className="h-8 w-auto invert" src={plezyyLogo} />
+          <span className="text-[10px] font-bold bg-[#4180FB] text-white px-2.5 py-0.5 rounded-full tracking-wider">
+            ADMIN PORTAL
+          </span>
+        </div>
+        <div className="flex items-center gap-4">
+          <span className="text-xs text-gray-400 tabular-nums">{time}</span>
+          <button
+            onClick={() => toast.info("No new critical alerts")}
+            className="relative text-gray-400 hover:text-white transition-colors"
+          >
+            <Bell className="w-5 h-5" />
+            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-gray-950" />
+          </button>
+          <button
+            onClick={() => toast.info("Logged in as Joseph (Owner)")}
+            className="w-8 h-8 rounded-full bg-[#4180FB] text-white text-sm font-bold flex items-center justify-center"
+          >
+            J
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-1 overflow-hidden">
+        {/* SIDEBAR */}
+        <aside className="w-56 bg-gray-950 flex flex-col flex-shrink-0 overflow-y-auto">
+          {navSections.map((section) => (
+            <div key={section.label}>
+              <div className="text-[10px] font-bold uppercase tracking-widest text-gray-500 px-4 pt-4 pb-1.5">
+                {section.label}
+              </div>
+              {section.items.map((item) => {
+                const Icon = item.icon;
+                const isActive = active === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActive(item.id)}
+                    className={`w-full text-left flex items-center gap-2.5 px-4 py-2 mx-2 my-0.5 rounded-lg text-sm transition-colors ${
+                      isActive
+                        ? "bg-[#4180FB]/20 text-white font-semibold"
+                        : "text-gray-400 hover:bg-[#4180FB]/10 hover:text-white"
+                    }`}
+                    style={{ width: "calc(100% - 1rem)" }}
+                  >
+                    <Icon className="w-4 h-4 flex-shrink-0" />
+                    <span className="flex-1">{item.label}</span>
+                    {item.badge && (
+                      <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                        {item.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+          <div className="mt-auto p-4 border-t border-gray-800">
+            <button
+              onClick={() => toast.info("Logging out…")}
+              className="flex items-center gap-2 text-sm text-gray-500 hover:text-red-400 transition-colors"
+            >
+              <LogOut className="w-4 h-4" /> Log out
+            </button>
+          </div>
+        </aside>
+
+        {/* CONTENT */}
+        <main className="flex-1 overflow-y-auto p-6">
+          {active === "dashboard" && <DashboardPage />}
+          {active === "analytics" && <AnalyticsPage />}
+          {active === "users" && <UsersPage onPasswordChange={handlePasswordChange} onDelete={handleDelete} />}
+          {active === "creators" && <CreatorsPage />}
+          {active === "fans" && <FansPage />}
+          {active === "content" && <ContentPage />}
+          {active === "messages" && <MessagesPage />}
+          {active === "reports" && <ReportsPage />}
+          {active === "ip" && <IpPage />}
+          {active === "finance" && <FinancePage />}
+          {active === "payouts" && <PayoutsPage />}
+          {active === "announcements" && <AnnouncementsPage />}
+          {active === "config" && <ConfigPage />}
+          {active === "performance" && <PerformancePage />}
+          {active === "audit" && <AuditPage />}
+        </main>
+      </div>
+
+      {/* MODALS */}
+      <Dialog open={modal.kind === "password"} onOpenChange={(o) => !o && closeModal()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Change password — {modal.kind === "password" ? modal.target : ""}
+            </DialogTitle>
+            <DialogDescription>This will immediately update their login password.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs font-semibold text-gray-500 mb-1 block">New password</label>
+              <Input type="password" placeholder="Enter new password" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-500 mb-1 block">Confirm password</label>
+              <Input type="password" placeholder="Confirm new password" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" className="rounded-full" onClick={closeModal}>
+              Cancel
+            </Button>
+            <Button className="rounded-full bg-[#4180FB] hover:bg-[#3268D4]" onClick={confirmModal}>
+              Save password
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={modal.kind === "delete"} onOpenChange={(o) => !o && closeModal()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-red-500" />
+              Permanently delete {modal.kind === "delete" ? modal.target : ""}?
+            </DialogTitle>
+            <DialogDescription>
+              This action CANNOT be undone. The profile, all content, messages, and earnings history will be erased forever.
+            </DialogDescription>
+          </DialogHeader>
+          <div>
+            <label className="text-xs font-semibold text-gray-500 mb-1 block">Type DELETE to confirm</label>
+            <Input
+              value={deleteConfirm}
+              onChange={(e) => setDeleteConfirm(e.target.value)}
+              placeholder="DELETE"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" className="rounded-full" onClick={closeModal}>
+              Cancel
+            </Button>
+            <Button
+              className="rounded-full bg-red-600 hover:bg-red-700"
+              disabled={deleteConfirm !== "DELETE"}
+              onClick={confirmModal}
+            >
+              Permanently delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

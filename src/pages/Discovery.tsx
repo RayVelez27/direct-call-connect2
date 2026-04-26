@@ -23,6 +23,13 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
+import {
   Search,
   ChevronRight,
   ChevronLeft,
@@ -1324,6 +1331,8 @@ export function DiscoveryContent() {
   const [selectedAgeRange, setSelectedAgeRange] = useState("18-25");
   const [selectedLanguage, setSelectedLanguage] = useState("English");
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
+  const [mobileSheet, setMobileSheet] = useState<null | "search" | "categories" | "location" | "services" | "age" | "language">(null);
+  const [quickApplied, setQuickApplied] = useState<Set<string>>(new Set());
 
   // Auth gating
   const [isSignedIn, setIsSignedIn] = useState<boolean | null>(null);
@@ -1416,68 +1425,105 @@ export function DiscoveryContent() {
   return (
     <section className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col" style={{ height: "calc(100vh - 64px)" }}>
 
-      {/* Mobile filter toggle */}
-      <div className="lg:hidden mb-4">
-        <Button
-          variant="outline"
-          className="gap-2 w-full"
-          onClick={() => setShowMobileFilters(!showMobileFilters)}
-        >
-          <SlidersHorizontal className="h-4 w-4" />
-          Filters
-        </Button>
-      </div>
+      {/* Mobile filter pill bar — horizontal scroll with quick-applies + category sheets */}
+      <MobileFilterBar
+        selectedCategories={selectedCategories}
+        selectedServices={selectedServices}
+        selectedLocation={selectedLocation}
+        selectedAgeRange={selectedAgeRange}
+        selectedLanguage={selectedLanguage}
+        quickApplied={quickApplied}
+        onToggleQuick={(key, location, service) => {
+          setQuickApplied((prev) => {
+            const next = new Set(prev);
+            if (next.has(key)) next.delete(key);
+            else next.add(key);
+            return next;
+          });
+          if (location) {
+            setSelectedLocation((prev) => (prev === location ? "Any Location" : location));
+          }
+          if (service) {
+            setSelectedServices((prev) => {
+              const next = new Set(prev);
+              if (next.has(service)) next.delete(service);
+              else next.add(service);
+              return next;
+            });
+          }
+        }}
+        onOpenSheet={(s) => setMobileSheet(s)}
+      />
 
       <div className="flex flex-col lg:flex-row gap-8 flex-1 min-h-0 overflow-hidden">
-        {/* Sidebar — light theme */}
-        <aside className={`w-full lg:w-72 shrink-0 overflow-y-auto rounded-2xl p-4 ${showMobileFilters ? "block" : "hidden lg:block"}`}>
-          {/* Search */}
-          <div className="relative mb-5">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-            <Input
-              placeholder="Search creators..."
-              className="pl-9 h-9 w-full rounded-lg text-sm"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+        {/* Sidebar — header + scroll + footer (desktop only) */}
+        <aside className="hidden lg:flex w-full lg:w-72 shrink-0 flex-col bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden">
+          {/* Header — title, search, tabs */}
+          <div className="px-5 pt-5 pb-3 border-b border-gray-200 dark:border-gray-800 shrink-0">
+            <div className="mb-3">
+              <h2 className="text-base font-bold text-gray-900 dark:text-white">
+                {sidebarTab === "filter" ? "Filter creators" : sidebarTab === "chat" ? "Conversations" : "Favorites"}
+              </h2>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                {sidebarTab === "filter"
+                  ? "Narrow down to exactly your type"
+                  : sidebarTab === "chat"
+                  ? "Your active chats"
+                  : "Creators you've saved"}
+              </p>
+            </div>
+
+            {/* Search */}
+            <div className="relative mb-3">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Search creators..."
+                className="pl-9 h-9 w-full rounded-full text-sm"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+
+            {/* Tabs */}
+            <div className="flex">
+              {(["filter", "chat", "favorite"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => {
+                    if ((tab === "chat" || tab === "favorite") && !isSignedIn) {
+                      setShowAuthModal(true);
+                      return;
+                    }
+                    setSidebarTab(tab);
+                  }}
+                  className={`relative flex-1 pb-2 text-xs font-bold capitalize transition-colors border-b-2 ${
+                    sidebarTab === tab
+                      ? "border-[#4180FB] text-[#4180FB] dark:text-[#7AAFFD] dark:border-[#7AAFFD]"
+                      : "border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  } ${tab === "favorite" && favPulse ? "animate-bounce" : ""} ${tab === "chat" && chatPulse ? "animate-bounce" : ""}`}
+                >
+                  {tab === "filter" ? "Filter" : tab === "chat" ? "Chat" : "Favorite"}
+                  {tab === "chat" && conversations.length > 0 && (
+                    <span className={`absolute -top-1 right-1 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-blue-500 text-white text-[10px] font-bold px-1 ${chatPulse ? "scale-125" : "scale-100"} transition-transform duration-300`}>
+                      {conversations.length}
+                    </span>
+                  )}
+                  {tab === "favorite" && favorites.length > 0 && (
+                    <span className={`absolute -top-1 right-1 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-rose-500 text-white text-[10px] font-bold px-1 ${favPulse ? "scale-125" : "scale-100"} transition-transform duration-300`}>
+                      {favorites.length}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* Tabs */}
-          <div className="flex border-b border-border mb-5">
-            {(["filter", "chat", "favorite"] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => {
-                  if ((tab === "chat" || tab === "favorite") && !isSignedIn) {
-                    setShowAuthModal(true);
-                    return;
-                  }
-                  setSidebarTab(tab);
-                }}
-                className={`relative flex-1 pb-2.5 text-sm font-bold capitalize transition-colors border-b-2 ${
-                  sidebarTab === tab
-                    ? "border-primary text-primary"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
-                } ${tab === "favorite" && favPulse ? "animate-bounce" : ""} ${tab === "chat" && chatPulse ? "animate-bounce" : ""}`}
-              >
-                {tab === "filter" ? "Filter" : tab === "chat" ? "Chat" : "Favorite"}
-                {tab === "chat" && conversations.length > 0 && (
-                  <span className={`absolute -top-1 right-1 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-blue-500 text-white text-[10px] font-bold px-1 ${chatPulse ? "scale-125" : "scale-100"} transition-transform duration-300`}>
-                    {conversations.length}
-                  </span>
-                )}
-                {tab === "favorite" && favorites.length > 0 && (
-                  <span className={`absolute -top-1 right-1 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-rose-500 text-white text-[10px] font-bold px-1 ${favPulse ? "scale-125" : "scale-100"} transition-transform duration-300`}>
-                    {favorites.length}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
+          {/* Scrollable filter body */}
+          <div className="flex-1 overflow-y-auto px-5 py-4">
 
           {/* Filter Tab */}
           {sidebarTab === "filter" && (
-            <div className="space-y-7">
+            <div className="space-y-5">
               <FilterSection title="Categories">
                 <Accordion type="multiple" className="w-full">
                   {categorySections.map((section) => (
@@ -1534,40 +1580,69 @@ export function DiscoveryContent() {
               </FilterSection>
 
               <FilterSection title="Service offering">
-                <div className="space-y-3">
-                  {serviceOfferings.map((service) => (
-                    <label key={service} className="flex items-center gap-3 cursor-pointer group">
-                      <Checkbox
-                        className="border-border"
-                        checked={selectedServices.has(service)}
-                        onCheckedChange={() => toggleService(service)}
-                      />
-                      <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">{service}</span>
-                    </label>
-                  ))}
+                <div className="flex flex-wrap gap-1.5">
+                  {serviceOfferings.map((service) => {
+                    const active = selectedServices.has(service);
+                    return (
+                      <button
+                        key={service}
+                        type="button"
+                        onClick={() => toggleService(service)}
+                        className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+                          active
+                            ? "bg-[#4180FB] text-white border-[#4180FB]"
+                            : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-[#4180FB] hover:text-[#4180FB]"
+                        }`}
+                      >
+                        {service}
+                      </button>
+                    );
+                  })}
                 </div>
               </FilterSection>
 
               <FilterSection title="Age range">
-                <Select value={selectedAgeRange} onValueChange={setSelectedAgeRange}>
-                  <SelectTrigger className="h-10 rounded-lg text-sm"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {ageRangeOptions.map((range) => (
-                      <SelectItem key={range} value={range}>{range}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex flex-wrap gap-1.5">
+                  {ageRangeOptions.map((range) => {
+                    const active = selectedAgeRange === range;
+                    return (
+                      <button
+                        key={range}
+                        type="button"
+                        onClick={() => setSelectedAgeRange(range)}
+                        className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+                          active
+                            ? "bg-[#4180FB] text-white border-[#4180FB]"
+                            : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-[#4180FB] hover:text-[#4180FB]"
+                        }`}
+                      >
+                        {range}
+                      </button>
+                    );
+                  })}
+                </div>
               </FilterSection>
 
               <FilterSection title="Language">
-                <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
-                  <SelectTrigger className="h-10 rounded-lg text-sm"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {languageOptions.map((lang) => (
-                      <SelectItem key={lang} value={lang}>{lang}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex flex-wrap gap-1.5">
+                  {languageOptions.map((lang) => {
+                    const active = selectedLanguage === lang;
+                    return (
+                      <button
+                        key={lang}
+                        type="button"
+                        onClick={() => setSelectedLanguage(lang)}
+                        className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+                          active
+                            ? "bg-[#4180FB] text-white border-[#4180FB]"
+                            : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-[#4180FB] hover:text-[#4180FB]"
+                        }`}
+                      >
+                        {lang}
+                      </button>
+                    );
+                  })}
+                </div>
               </FilterSection>
             </div>
           )}
@@ -1687,10 +1762,40 @@ export function DiscoveryContent() {
               </div>
             )
           )}
+          </div>
+
+          {/* Footer — only shows on filter tab */}
+          {sidebarTab === "filter" && (
+            <div className="px-5 py-3.5 border-t border-gray-200 dark:border-gray-800 shrink-0">
+              <Button
+                className="w-full h-11 rounded-full bg-[#4180FB] hover:bg-[#3268D4] dark:bg-[#5A96FC] dark:hover:bg-[#7AAFFD] text-white font-bold tracking-wide"
+                onClick={() => {
+                  setShowMobileFilters(false);
+                  toast?.("Results updated");
+                }}
+              >
+                Search creators
+              </Button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery("");
+                  setSelectedCategories(new Set());
+                  setSelectedServices(new Set(serviceOfferings));
+                  setSelectedLocation("Any Location");
+                  setSelectedAgeRange(ageRangeOptions[0]);
+                  setSelectedLanguage(languageOptions[0]);
+                }}
+                className="w-full mt-1.5 text-xs text-gray-400 hover:text-[#4180FB] dark:hover:text-[#7AAFFD] py-1.5 transition-colors"
+              >
+                Reset all filters
+              </button>
+            </div>
+          )}
         </aside>
 
         {/* Main Content — dark theme */}
-        <div className={`flex-1 min-h-0 min-w-0 bg-[#f0f0f0] rounded-2xl relative ${showMobileFilters ? "hidden lg:block" : ""}`}>
+        <div className="flex-1 min-h-0 min-w-0 bg-[#f0f0f0] rounded-2xl relative">
           {activeService ? (
             <ServicePostView
               creator={activeService.creator}
@@ -1760,7 +1865,312 @@ export function DiscoveryContent() {
           </div>
         </div>
       )}
+
+      {/* Mobile filter sheets */}
+      <Sheet open={mobileSheet === "search"} onOpenChange={(o) => !o && setMobileSheet(null)}>
+        <SheetContent side="bottom" className="rounded-t-2xl max-h-[60vh] overflow-y-auto">
+          <SheetHeader className="text-left">
+            <SheetTitle>Search creators</SheetTitle>
+            <SheetDescription>Find a creator by name or keyword.</SheetDescription>
+          </SheetHeader>
+          <div className="relative mt-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              autoFocus
+              placeholder="Search creators..."
+              className="pl-9 h-11 rounded-full text-sm"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={mobileSheet === "categories"} onOpenChange={(o) => !o && setMobileSheet(null)}>
+        <SheetContent side="bottom" className="rounded-t-2xl max-h-[80vh] overflow-y-auto">
+          <SheetHeader className="text-left mb-3">
+            <SheetTitle>Categories</SheetTitle>
+            <SheetDescription>Pick the niches you're into.</SheetDescription>
+          </SheetHeader>
+          <Accordion type="multiple" className="w-full">
+            {categorySections.map((section) => (
+              <AccordionItem key={section.heading} value={section.heading} className="border-border/50">
+                <AccordionTrigger className="py-2.5 text-sm font-semibold hover:no-underline">
+                  {section.heading}
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="space-y-4">
+                    {section.groups.map((group, gi) => (
+                      <div key={gi}>
+                        {group.title && (
+                          <p className="text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider mb-2">
+                            {group.title}
+                          </p>
+                        )}
+                        <div className="space-y-2">
+                          {group.items.map((item) => (
+                            <label key={item.name} className="flex items-center gap-2.5 cursor-pointer group">
+                              <Checkbox
+                                className="border-border"
+                                checked={selectedCategories.has(item.name)}
+                                onCheckedChange={() => toggleCategory(item.name)}
+                              />
+                              <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors flex-1">
+                                {item.name}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+          <Button
+            className="w-full mt-4 h-11 rounded-full bg-[#4180FB] hover:bg-[#3268D4] text-white font-bold"
+            onClick={() => setMobileSheet(null)}
+          >
+            Apply
+          </Button>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={mobileSheet === "location"} onOpenChange={(o) => !o && setMobileSheet(null)}>
+        <SheetContent side="bottom" className="rounded-t-2xl max-h-[70vh] overflow-y-auto">
+          <SheetHeader className="text-left mb-3">
+            <SheetTitle>Location</SheetTitle>
+            <SheetDescription>Where should the creators be from?</SheetDescription>
+          </SheetHeader>
+          <div className="flex flex-wrap gap-1.5">
+            {locationOptions.map((loc) => {
+              const active = selectedLocation === loc;
+              return (
+                <button
+                  key={loc}
+                  onClick={() => setSelectedLocation(loc)}
+                  className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                    active
+                      ? "bg-[#4180FB] text-white border-[#4180FB]"
+                      : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-[#4180FB] hover:text-[#4180FB]"
+                  }`}
+                >
+                  {loc}
+                </button>
+              );
+            })}
+          </div>
+          <Button
+            className="w-full mt-4 h-11 rounded-full bg-[#4180FB] hover:bg-[#3268D4] text-white font-bold"
+            onClick={() => setMobileSheet(null)}
+          >
+            Apply
+          </Button>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={mobileSheet === "services"} onOpenChange={(o) => !o && setMobileSheet(null)}>
+        <SheetContent side="bottom" className="rounded-t-2xl max-h-[60vh] overflow-y-auto">
+          <SheetHeader className="text-left mb-3">
+            <SheetTitle>Service offering</SheetTitle>
+            <SheetDescription>What do you want to do together?</SheetDescription>
+          </SheetHeader>
+          <div className="flex flex-wrap gap-1.5">
+            {serviceOfferings.map((service) => {
+              const active = selectedServices.has(service);
+              return (
+                <button
+                  key={service}
+                  onClick={() => toggleService(service)}
+                  className={`text-sm px-4 py-2 rounded-full border transition-colors ${
+                    active
+                      ? "bg-[#4180FB] text-white border-[#4180FB]"
+                      : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-[#4180FB] hover:text-[#4180FB]"
+                  }`}
+                >
+                  {service}
+                </button>
+              );
+            })}
+          </div>
+          <Button
+            className="w-full mt-4 h-11 rounded-full bg-[#4180FB] hover:bg-[#3268D4] text-white font-bold"
+            onClick={() => setMobileSheet(null)}
+          >
+            Apply
+          </Button>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={mobileSheet === "age"} onOpenChange={(o) => !o && setMobileSheet(null)}>
+        <SheetContent side="bottom" className="rounded-t-2xl">
+          <SheetHeader className="text-left mb-3">
+            <SheetTitle>Age range</SheetTitle>
+            <SheetDescription>Pick the age range you prefer.</SheetDescription>
+          </SheetHeader>
+          <div className="flex flex-wrap gap-1.5">
+            {ageRangeOptions.map((range) => {
+              const active = selectedAgeRange === range;
+              return (
+                <button
+                  key={range}
+                  onClick={() => setSelectedAgeRange(range)}
+                  className={`text-sm px-4 py-2 rounded-full border transition-colors ${
+                    active
+                      ? "bg-[#4180FB] text-white border-[#4180FB]"
+                      : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-[#4180FB] hover:text-[#4180FB]"
+                  }`}
+                >
+                  {range}
+                </button>
+              );
+            })}
+          </div>
+          <Button
+            className="w-full mt-4 h-11 rounded-full bg-[#4180FB] hover:bg-[#3268D4] text-white font-bold"
+            onClick={() => setMobileSheet(null)}
+          >
+            Apply
+          </Button>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={mobileSheet === "language"} onOpenChange={(o) => !o && setMobileSheet(null)}>
+        <SheetContent side="bottom" className="rounded-t-2xl">
+          <SheetHeader className="text-left mb-3">
+            <SheetTitle>Language</SheetTitle>
+            <SheetDescription>Pick your preferred language.</SheetDescription>
+          </SheetHeader>
+          <div className="flex flex-wrap gap-1.5">
+            {languageOptions.map((lang) => {
+              const active = selectedLanguage === lang;
+              return (
+                <button
+                  key={lang}
+                  onClick={() => setSelectedLanguage(lang)}
+                  className={`text-sm px-4 py-2 rounded-full border transition-colors ${
+                    active
+                      ? "bg-[#4180FB] text-white border-[#4180FB]"
+                      : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-[#4180FB] hover:text-[#4180FB]"
+                  }`}
+                >
+                  {lang}
+                </button>
+              );
+            })}
+          </div>
+          <Button
+            className="w-full mt-4 h-11 rounded-full bg-[#4180FB] hover:bg-[#3268D4] text-white font-bold"
+            onClick={() => setMobileSheet(null)}
+          >
+            Apply
+          </Button>
+        </SheetContent>
+      </Sheet>
     </section>
+  );
+}
+
+type SheetKey = "search" | "categories" | "location" | "services" | "age" | "language";
+
+function MobileFilterBar({
+  selectedCategories,
+  selectedServices,
+  selectedLocation,
+  selectedAgeRange,
+  selectedLanguage,
+  quickApplied,
+  onToggleQuick,
+  onOpenSheet,
+}: {
+  selectedCategories: Set<string>;
+  selectedServices: Set<string>;
+  selectedLocation: string;
+  selectedAgeRange: string;
+  selectedLanguage: string;
+  quickApplied: Set<string>;
+  onToggleQuick: (key: string, location?: string, service?: string) => void;
+  onOpenSheet: (s: SheetKey) => void;
+}) {
+  const quickApplies: { key: string; emoji: string; label: string; location?: string; service?: string }[] = [
+    { key: "top-rated", emoji: "✨", label: "Top Rated" },
+    { key: "online", emoji: "🟢", label: "Online Now" },
+    { key: "under-30", emoji: "💰", label: "Under $30" },
+    { key: "loc-usa", emoji: "🇺🇸", label: "USA", location: "United States" },
+    { key: "loc-uk", emoji: "🇬🇧", label: "UK", location: "United Kingdom" },
+    { key: "svc-video", emoji: "📹", label: "Video", service: "Video" },
+    { key: "svc-chat", emoji: "💬", label: "Chat", service: "Chat" },
+    { key: "svc-voice", emoji: "🎙️", label: "Voice", service: "Voice" },
+    { key: "svc-custom", emoji: "🎁", label: "Custom", service: "Custom content" },
+    { key: "loc-canada", emoji: "🇨🇦", label: "Canada", location: "Canada" },
+    { key: "loc-australia", emoji: "🇦🇺", label: "Australia", location: "Australia" },
+  ];
+
+  const categoryButtons: { key: SheetKey; label: string; count: number }[] = [
+    { key: "categories", label: "Categories", count: selectedCategories.size },
+    { key: "location", label: "Location", count: selectedLocation && selectedLocation !== "Any Location" ? 1 : 0 },
+    { key: "services", label: "Services", count: selectedServices.size },
+    { key: "age", label: "Age", count: selectedAgeRange ? 1 : 0 },
+    { key: "language", label: "Language", count: selectedLanguage ? 1 : 0 },
+  ];
+
+  return (
+    <div className="lg:hidden mb-4 -mx-4 sm:-mx-6 px-4 sm:px-6">
+      <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1 -mb-1">
+        {/* Search pill — sticky-ish on the left */}
+        <button
+          onClick={() => onOpenSheet("search")}
+          className="shrink-0 h-10 w-10 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 flex items-center justify-center hover:border-[#4180FB] hover:text-[#4180FB] transition-colors"
+          aria-label="Search creators"
+        >
+          <Search className="h-4 w-4" />
+        </button>
+
+        {/* Quick-apply pills */}
+        {quickApplies.map((q) => {
+          const active = quickApplied.has(q.key);
+          return (
+            <button
+              key={q.key}
+              onClick={() => onToggleQuick(q.key, q.location, q.service)}
+              className={`shrink-0 inline-flex items-center gap-1.5 h-10 px-4 rounded-full border text-sm font-medium whitespace-nowrap transition-all ${
+                active
+                  ? "bg-[#4180FB] text-white border-[#4180FB] shadow-sm"
+                  : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-[#4180FB] hover:text-[#4180FB]"
+              }`}
+            >
+              <span aria-hidden>{q.emoji}</span>
+              {q.label}
+            </button>
+          );
+        })}
+
+        {/* Divider */}
+        <div className="shrink-0 h-6 w-px bg-gray-200 dark:bg-gray-700 mx-1" />
+
+        {/* Category sheet pills */}
+        {categoryButtons.map((c) => (
+          <button
+            key={c.key}
+            onClick={() => onOpenSheet(c.key)}
+            className={`shrink-0 inline-flex items-center gap-2 h-10 px-4 rounded-full border text-sm font-medium whitespace-nowrap transition-all ${
+              c.count > 0
+                ? "bg-[#EBF1FF] dark:bg-[#4180FB]/20 border-[#4180FB] text-[#1E4FBF] dark:text-[#A8C4FF]"
+                : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300"
+            }`}
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5 opacity-70" />
+            {c.label}
+            {c.count > 0 && (
+              <span className="ml-0.5 inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-[#4180FB] text-white text-[10px] font-bold">
+                {c.count}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -1909,6 +2319,38 @@ function SwipeView({ creators: initialCreators, onLike, onChat, onViewProfile, o
           </button>
         )}
       </div>
+
+      {/* Queue progress dots — shows before/after position in the swipe deck */}
+      {initialCreators.length > 1 && cards.length > 0 && (() => {
+        const swipedCount = initialCreators.length - cards.length;
+        const currentIdx = swipedCount; // active = top card position
+        return (
+          <div className="w-full max-w-[400px] mt-4 px-2">
+            <div className="flex gap-[3px] items-center">
+              {initialCreators.map((_, i) => {
+                const isPast = i < currentIdx;
+                const isActive = i === currentIdx;
+                return (
+                  <span
+                    key={i}
+                    aria-hidden
+                    className={`flex-1 rounded-full transition-all duration-300 ${
+                      isActive
+                        ? "h-2 bg-[#4180FB] dark:bg-[#5A96FC]"
+                        : isPast
+                          ? "h-1 bg-[#4180FB]/50 dark:bg-[#5A96FC]/50"
+                          : "h-1 bg-gray-300 dark:bg-gray-700"
+                    }`}
+                  />
+                );
+              })}
+            </div>
+            <div className="text-center text-[11px] font-medium text-gray-500 dark:text-gray-400 mt-1.5 tabular-nums">
+              {currentIdx + 1} of {initialCreators.length} creators
+            </div>
+          </div>
+        );
+      })()}
 
     </div>
   );
@@ -3008,7 +3450,9 @@ function ChatView({ creator, onBack }: { creator: Creator; onBack: () => void })
 function FilterSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section>
-      <h3 className="text-sm font-bold text-foreground mb-3">{title}</h3>
+      <h3 className="text-[11px] font-bold uppercase tracking-widest text-[#1E4FBF] dark:text-[#A8C4FF] mb-2">
+        {title}
+      </h3>
       {children}
     </section>
   );
