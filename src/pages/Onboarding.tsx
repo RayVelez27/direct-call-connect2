@@ -106,7 +106,6 @@ export default function Onboarding() {
   const [photos, setPhotos] = useState<{ file: File; preview: string }[]>([]);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
-  const MIN_PHOTOS = 3;
   const MAX_PHOTOS = 10;
 
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -162,11 +161,6 @@ export default function Onboarding() {
       toast.error("Please select at least 3 categories.");
       return;
     }
-    if (photos.length < MIN_PHOTOS) {
-      toast.error(`Please upload at least ${MIN_PHOTOS} photos.`);
-      return;
-    }
-
     setSaving(true);
     try {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -274,7 +268,7 @@ export default function Onboarding() {
             <div>
               <h2 className="text-xl font-bold text-foreground">Profile Photos</h2>
               <p className="text-sm text-muted-foreground mt-1">
-                Upload at least {MIN_PHOTOS} photos (max {MAX_PHOTOS}). These will be displayed on your profile.
+                Upload up to {MAX_PHOTOS} photos. These will be displayed on your profile.
               </p>
             </div>
 
@@ -317,9 +311,8 @@ export default function Onboarding() {
               )}
             </div>
 
-            <p className={`text-sm font-medium ${photos.length < MIN_PHOTOS ? "text-destructive" : "text-green-600"}`}>
-              {photos.length} / {MIN_PHOTOS} minimum uploaded
-              {photos.length >= MIN_PHOTOS && " ✓"}
+            <p className="text-sm font-medium text-muted-foreground">
+              {photos.length} / {MAX_PHOTOS} uploaded
             </p>
           </section>
 

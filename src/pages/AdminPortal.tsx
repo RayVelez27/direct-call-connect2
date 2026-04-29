@@ -892,12 +892,19 @@ function IpPage() {
 
 function FinancePage() {
   const [period, setPeriod] = useState("Today");
-  const txns = [
+  const [query, setQuery] = useState("");
+  const allTxns = [
     { id: "#TXN-88201", fan: "mike@email.com", creator: "Alexis R.", amount: "$49", cut: "$9.80", type: "Custom video", status: "paid" as StatusKind, statusLabel: "Paid", date: "Today 2:12pm" },
     { id: "#TXN-88199", fan: "ryan@email.com", creator: "Jordan M.", amount: "$25", cut: "$5.00", type: "Live chat", status: "paid" as StatusKind, statusLabel: "Paid", date: "Today 11:04am" },
     { id: "#TXN-88195", fan: "fan512@email.com", creator: "Yuki N.", amount: "$40", cut: "$8.00", type: "Photo set", status: "held" as StatusKind, statusLabel: "Held", date: "Today 9:30am" },
     { id: "#TXN-88190", fan: "fan204@email.com", creator: "Sofia T.", amount: "$120", cut: "$24.00", type: "Premium video", status: "refunded" as StatusKind, statusLabel: "Refunded", date: "Yesterday" },
   ];
+  const q = query.trim().toLowerCase();
+  const txns = q
+    ? allTxns.filter((t) =>
+        [t.id, t.fan, t.creator, t.type, t.statusLabel, t.amount].some((v) => v.toLowerCase().includes(q))
+      )
+    : allTxns;
   return (
     <div>
       <PageHeader title="Financial Reports" subtitle="All revenue, transactions, refunds, and platform earnings." />
@@ -911,6 +918,15 @@ function FinancePage() {
         <StatCard label="Platform revenue (20%)" value="$1,684" change="↑ 12% vs yesterday" changeKind="up" />
         <StatCard label="Refunds issued" value="$120" change="3 refunds" changeKind="down" />
         <StatCard label="Pending payouts" value="$24,810" change="To creators" />
+      </div>
+      <div className="relative mb-3 max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search transactions by ID, fan, creator, type…"
+          className="pl-9"
+        />
       </div>
       <TableCard
         title="Recent transactions"
@@ -1019,17 +1035,48 @@ function PayoutsPage() {
 function AnnouncementsPage() {
   const [target, setTarget] = useState("Everyone");
   const [text, setText] = useState("");
-  const targets = ["Everyone", "Creators only", "Fans only", "Suspended users"];
+  const [recipient, setRecipient] = useState("");
+  const targets = ["Everyone", "Creators only", "Fans only", "Suspended users", "Specific user"];
+  const isDirect = target === "Specific user";
+  const userSuggestions = [
+    { name: "Alexis Rivera", email: "alexis@email.com" },
+    { name: "Jordan M.", email: "jordan@email.com" },
+    { name: "Yuki Naka", email: "yuki@email.com" },
+    { name: "Sofia Torres", email: "sofia@email.com" },
+    { name: "Mike (fan)", email: "mike@email.com" },
+    { name: "Ryan (fan)", email: "ryan@email.com" },
+  ];
+  const matchingUsers = recipient
+    ? userSuggestions.filter(
+        (u) =>
+          u.name.toLowerCase().includes(recipient.toLowerCase()) ||
+          u.email.toLowerCase().includes(recipient.toLowerCase())
+      )
+    : [];
+  const handleSend = () => {
+    if (isDirect) {
+      if (!recipient.trim()) {
+        toast.error("Enter a user (name or email) to message.");
+        return;
+      }
+      toast.success(`Message sent to ${recipient}`);
+    } else {
+      toast.success(`Announcement sent to ${target}`);
+    }
+  };
   const past = [
     { msg: "🎉 Welcome to Plezyy! Explore thousands of creators.", to: "Everyone", date: "Apr 1, 2025", opened: "82%" },
     { msg: "📢 New payout schedule effective May 1st.", to: "Creators", date: "Apr 15, 2025", opened: "94%" },
     { msg: "🔒 Updated Terms of Service — please review.", to: "Everyone", date: "Apr 18, 2025", opened: "71%" },
+    { msg: "Hi Sofia — please verify your ID by Friday.", to: "sofia@email.com", date: "Apr 22, 2025", opened: "100%" },
   ];
   return (
     <div>
-      <PageHeader title="Announcements" subtitle="Send messages or platform notices to all users, creators, or fans." />
+      <PageHeader title="Announcements" subtitle="Send messages to all users, segments, or message a specific user directly." />
       <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5 mb-5">
-        <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Send an announcement</h3>
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">
+          {isDirect ? "Direct message a user" : "Send an announcement"}
+        </h3>
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-2.5">Who should receive this?</p>
         <div className="flex flex-wrap gap-2 mb-3">
           {targets.map((t) => (
@@ -1046,28 +1093,62 @@ function AnnouncementsPage() {
             </button>
           ))}
         </div>
+        {isDirect && (
+          <div className="relative mb-3">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              value={recipient}
+              onChange={(e) => setRecipient(e.target.value)}
+              placeholder="Search by name or email…"
+              className="pl-9"
+            />
+            {recipient && matchingUsers.length > 0 && (
+              <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-md shadow-md max-h-48 overflow-y-auto">
+                {matchingUsers.map((u) => (
+                  <button
+                    key={u.email}
+                    type="button"
+                    onClick={() => setRecipient(u.email)}
+                    className="w-full text-left px-3 py-2 text-xs hover:bg-gray-50 dark:hover:bg-gray-800 flex justify-between"
+                  >
+                    <span className="font-medium text-gray-900 dark:text-white">{u.name}</span>
+                    <span className="text-gray-500">{u.email}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Write your announcement here… (e.g. New features, maintenance window, policy updates)"
+          placeholder={
+            isDirect
+              ? "Write a direct message to this user…"
+              : "Write your announcement here… (e.g. New features, maintenance window, policy updates)"
+          }
           className="min-h-[90px]"
         />
         <div className="flex gap-2.5 mt-3 items-center flex-wrap">
           <Button
             className="rounded-full bg-[#4180FB] hover:bg-[#3268D4]"
-            onClick={() => toast.success(`Announcement sent to ${target}`)}
+            onClick={handleSend}
           >
             <Send className="w-4 h-4 mr-1.5" />
-            Send now
+            {isDirect ? "Send message" : "Send now"}
           </Button>
-          <Button
-            variant="outline"
-            className="rounded-full"
-            onClick={() => toast.success("Announcement scheduled")}
-          >
-            Schedule for later
-          </Button>
-          <span className="text-xs text-gray-400 ml-auto">Push notification + in-app banner</span>
+          {!isDirect && (
+            <Button
+              variant="outline"
+              className="rounded-full"
+              onClick={() => toast.success("Announcement scheduled")}
+            >
+              Schedule for later
+            </Button>
+          )}
+          <span className="text-xs text-gray-400 ml-auto">
+            {isDirect ? "Delivered as a direct message + email" : "Push notification + in-app banner"}
+          </span>
         </div>
       </div>
       <TableCard title="Past announcements">
@@ -1200,15 +1281,23 @@ function PerformancePage() {
     { rank: "4", country: "🇦🇺 Australia", users: "1,920", rev: "$110k", top: "Luna V." },
     { rank: "5", country: "🇧🇷 Brazil", users: "1,440", rev: "$74k", top: "Sofia Torres" },
   ];
+  const spenders = [
+    { rank: "🥇 1", color: "text-amber-500", initials: "MK", name: "Michael Kim", email: "mike@email.com", spent: "$3,420", orders: 64, fav: "Custom videos" },
+    { rank: "🥈 2", color: "text-gray-400", initials: "RP", name: "Ryan P.", email: "ryan@email.com", spent: "$2,180", orders: 41, fav: "Live chat" },
+    { rank: "🥉 3", color: "text-orange-700", initials: "DC", name: "Daniel C.", email: "fan204@email.com", spent: "$1,940", orders: 27, fav: "Premium video" },
+    { rank: "4", color: "", initials: "JL", name: "Jenna L.", email: "fan512@email.com", spent: "$1,205", orders: 33, fav: "Photo set" },
+    { rank: "5", color: "", initials: "TB", name: "Tom B.", email: "tom@email.com", spent: "$880", orders: 19, fav: "Shoutouts" },
+  ];
 
   return (
     <div>
-      <PageHeader title="Best Performers" subtitle="Top creators, gigs, and regions driving the most revenue." />
+      <PageHeader title="Best Performers" subtitle="Top creators, gigs, regions, and spenders driving platform activity." />
       <Tabs defaultValue="creators">
         <TabsList className="mb-4">
           <TabsTrigger value="creators">Top creators</TabsTrigger>
           <TabsTrigger value="gigs">Top gigs</TabsTrigger>
           <TabsTrigger value="regions">Top regions</TabsTrigger>
+          <TabsTrigger value="spenders">Top spenders</TabsTrigger>
         </TabsList>
         <TabsContent value="creators">
           <TableCard title="">
@@ -1291,6 +1380,41 @@ function PerformancePage() {
                     <td className={tableCellCls}>{r.users}</td>
                     <td className={`${tableCellCls} font-bold text-gray-900 dark:text-white`}>{r.rev}</td>
                     <td className={tableCellCls}>{r.top}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </TableCard>
+        </TabsContent>
+        <TabsContent value="spenders">
+          <TableCard title="">
+            <table className="w-full">
+              <thead>
+                <tr>
+                  <th className={tableHeadCls}>Rank</th>
+                  <th className={tableHeadCls}>Member</th>
+                  <th className={tableHeadCls}>Email</th>
+                  <th className={tableHeadCls}>Total spent (MTD)</th>
+                  <th className={tableHeadCls}>Orders</th>
+                  <th className={tableHeadCls}>Favorite category</th>
+                </tr>
+              </thead>
+              <tbody>
+                {spenders.map((s) => (
+                  <tr key={s.email} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                    <td className={tableCellCls}>
+                      <span className={`font-bold ${s.color}`}>{s.rank}</span>
+                    </td>
+                    <td className={tableCellCls}>
+                      <div className="flex items-center gap-2">
+                        <Avatar initials={s.initials} />
+                        <span className="font-bold text-gray-900 dark:text-white">{s.name}</span>
+                      </div>
+                    </td>
+                    <td className={`${tableCellCls} text-gray-500 dark:text-gray-400`}>{s.email}</td>
+                    <td className={`${tableCellCls} font-bold text-green-600`}>{s.spent}</td>
+                    <td className={tableCellCls}>{s.orders}</td>
+                    <td className={tableCellCls}>{s.fav}</td>
                   </tr>
                 ))}
               </tbody>
