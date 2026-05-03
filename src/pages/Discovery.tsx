@@ -1427,7 +1427,7 @@ export function DiscoveryContent() {
 
 
   return (
-    <section className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col" style={{ height: "calc(100vh - 64px)" }}>
+    <section className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-[calc(4.75rem+env(safe-area-inset-bottom))] lg:pb-6 flex flex-col" style={{ height: "calc(100vh - 64px)" }}>
 
       {/* Mobile filter pill bar — horizontal scroll with quick-applies + category sheets */}
       <MobileFilterBar
@@ -2120,9 +2120,9 @@ function MobileFilterBar({
   ];
 
   return (
-    <div className="lg:hidden mb-4 -mx-4 sm:-mx-6 px-4 sm:px-6">
-      <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1 -mb-1">
-        {/* Search pill — sticky-ish on the left */}
+    <div className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-t border-gray-200 dark:border-gray-800 px-4 sm:px-6 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+        {/* Search pill */}
         <button
           onClick={() => onOpenSheet("search")}
           className="shrink-0 h-10 w-10 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 flex items-center justify-center hover:border-[#4180FB] hover:text-[#4180FB] transition-colors"
@@ -2131,29 +2131,7 @@ function MobileFilterBar({
           <Search className="h-4 w-4" />
         </button>
 
-        {/* Quick-apply pills */}
-        {quickApplies.map((q) => {
-          const active = quickApplied.has(q.key);
-          return (
-            <button
-              key={q.key}
-              onClick={() => onToggleQuick(q.key, q.location, q.service)}
-              className={`shrink-0 inline-flex items-center gap-1.5 h-10 px-4 rounded-full border text-sm font-medium whitespace-nowrap transition-all ${
-                active
-                  ? "bg-[#4180FB] text-white border-[#4180FB] shadow-sm"
-                  : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-[#4180FB] hover:text-[#4180FB]"
-              }`}
-            >
-              <span aria-hidden>{q.emoji}</span>
-              {q.label}
-            </button>
-          );
-        })}
-
-        {/* Divider */}
-        <div className="shrink-0 h-6 w-px bg-gray-200 dark:bg-gray-700 mx-1" />
-
-        {/* Category sheet pills */}
+        {/* Category sheet pills (Categories, Location, Services, Age, Language) */}
         {categoryButtons.map((c) => (
           <button
             key={c.key}
@@ -2173,6 +2151,28 @@ function MobileFilterBar({
             )}
           </button>
         ))}
+
+        {/* Divider */}
+        <div className="shrink-0 h-6 w-px bg-gray-200 dark:bg-gray-700 mx-1" />
+
+        {/* Quick-apply badges */}
+        {quickApplies.map((q) => {
+          const active = quickApplied.has(q.key);
+          return (
+            <button
+              key={q.key}
+              onClick={() => onToggleQuick(q.key, q.location, q.service)}
+              className={`shrink-0 inline-flex items-center gap-1.5 h-10 px-4 rounded-full border text-sm font-medium whitespace-nowrap transition-all ${
+                active
+                  ? "bg-[#4180FB] text-white border-[#4180FB] shadow-sm"
+                  : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-[#4180FB] hover:text-[#4180FB]"
+              }`}
+            >
+              <span aria-hidden>{q.emoji}</span>
+              {q.label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

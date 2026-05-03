@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 
 export default function HomeHero() {
   return (
-    <section className="bg-[#EBF1FF] dark:bg-[#4180FB]/10 px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+    <section className="bg-[#EBF1FF] dark:bg-[#4180FB]/10 px-4 sm:px-6 lg:px-8 py-8 md:py-12">
       <div className="max-w-3xl mx-auto text-center">
         <span className="inline-block text-xs font-semibold tracking-widest uppercase bg-[#D6E2FF] dark:bg-[#4180FB]/30 text-[#1E4FBF] dark:text-[#A8C4FF] px-4 py-1.5 rounded-full mb-5">
           The marketplace for virtual services
@@ -46,6 +46,23 @@ export default function HomeHero() {
           >
             Start selling your services
           </Link>
+        </div>
+        <div className="mt-10 flex flex-wrap justify-center gap-x-12 gap-y-4">
+          {[
+            { num: "12,400+", label: "Active creators" },
+            { num: "$2.1M", label: "Paid to creators" },
+            { num: "4.8 ★", label: "Avg. service rating" },
+            { num: "48hr", label: "Avg. delivery time" },
+          ].map((s) => (
+            <div key={s.label} className="text-center min-w-[120px]">
+              <div className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
+                {s.num}
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                {s.label}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </section>
